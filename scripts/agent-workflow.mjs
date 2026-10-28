@@ -113,10 +113,12 @@ export function validateHandoff(handoff, {ticket, registry, headSha, baseSha, re
   invariant(handoff.requirements_sha256 === requirementsHash(ticket), 'Requirements changed; refresh the live comparison and handoff');
   invariant(handoff.head_sha === headSha, 'Stale handoff: HEAD changed');
   invariant(handoff.base_sha === baseSha, 'Stale handoff: base changed');
+  invariant(text(handoff.branch), 'Record the PR source branch');
+  invariant(/^https:\/\/github\.com\/MudabbirulSaad\/rust-download-manager\/pull\/[1-9][0-9]*$/.test(handoff.pr_url ?? ''), 'Record the linked RDM pull request URL');
   invariant(handoff.live_requirements?.compared === true && text(handoff.live_requirements.checked_at) && text(handoff.live_requirements.issue_url), 'Live Jira requirements comparison is missing');
   invariant(handoff.live_requirements.issue_url === `https://rdm-mudabbirulsaad.atlassian.net/browse/${ticket.agent.key}`, 'Wrong Jira site/ticket in live comparison');
   invariant(Array.isArray(handoff.acceptance) && handoff.acceptance.length === ticket.criteria.length, 'Acceptance evidence is incomplete');
-  const results = new Map();
+  const results = new Map(), cloudResults = new Set();
   for (const report of reports) {
     invariant(report.schema_version === 1 && report.head_sha === headSha && report.clean === true, 'Stale or dirty test report');
     invariant(report.base_sha === baseSha, 'Report base changed; retest the merge candidate');
@@ -131,6 +133,7 @@ export function validateHandoff(handoff, {ticket, registry, headSha, baseSha, re
       if (report.environment !== handoff.environment) invariant(/^https:\/\/github\.com\//.test(report.artifact_url ?? ''), 'External test evidence needs a durable GitHub artifact link');
       if (definition.interactive) invariant(check.interactive === true && report.environment === 'local', 'Interactive portal evidence must be genuinely local');
       results.set(check.id, check);
+      if (report.environment === 'cloud') cloudResults.add(check.id);
     }
   }
   for (const id of required) invariant(results.has(id), `Required check not passed: ${id}`);
@@ -144,6 +147,10 @@ export function validateHandoff(handoff, {ticket, registry, headSha, baseSha, re
   if (phase === 'review' || phase === 'merge') {
     invariant(handoff.independent_review?.status === 'passed' && handoff.independent_review.head_sha === headSha && text(handoff.independent_review.summary), 'Independent review of the final revision is missing');
     invariant(handoff.independent_review.open_findings === 0, 'Unresolved review findings remain');
+    for (const id of required) {
+      const allowed = registry.checks[id].environments;
+      if (!allowed || allowed.includes('cloud')) invariant(cloudResults.has(id), `Independent cloud rerun missing: ${id}`);
+    }
   }
   return {eligible: true, issue_key: handoff.issue_key, head_sha: headSha, required_checks: required};
 }
@@ -269,7 +276,7 @@ export async function main(args = process.argv.slice(2), root = ROOT) {
       const report = readJson(resolve(opt.report));
       const handoff = {schema_version: 1, issue_key: ticket.agent.key,
         requirements_sha256: requirementsHash(ticket), head_sha: report.head_sha,
-        base_sha: report.base_sha, environment: report.environment, pr_url: '',
+        base_sha: report.base_sha, environment: report.environment, branch: report.branch, pr_url: '',
         live_requirements: {compared: false, checked_at: '', issue_url: `https://rdm-mudabbirulsaad.atlassian.net/browse/${ticket.agent.key}`},
         reports: [resolve(opt.report)], acceptance: ticket.criteria.map((criterion, i) => ({id: `AC-${i + 1}`, criterion, status: 'not-run', explanation: '', check_ids: []})),
         limitations: [], migrations: [], independent_review: {status: 'not-run', head_sha: '', open_findings: null, summary: ''}};

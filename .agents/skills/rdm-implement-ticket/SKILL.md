@@ -26,7 +26,8 @@ paths; do not depend on this machine's home directory or the installed RDM app.
 5. Create an evidence template with `npm run agent:handoff -- init --ticket
    RDM-KEY --report .agent-runs/RUN/checks.json`. Fill acceptance criteria using
    observed test results, local evidence and explanations. The template deliberately
-   starts unverified; it is not a certificate. Validate it with the handoff command.
+   starts unverified; it is not a certificate. Add the PR URL and source branch
+   before final validation with the handoff command.
 6. Push and create/update a PR; attach durable report/logs and the Jira link. Include
    migrations, limitations and exact base/head SHAs. Do not attach cookies or real
    browser/download data. Reuse the existing PR after interruptions.

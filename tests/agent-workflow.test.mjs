@@ -18,7 +18,8 @@ function fixture(code = 'B04', environment = 'local') {
       interactive: registry.checks[id].interactive ?? false}))};
   const handoff = {schema_version: 1, issue_key: ticket.agent.key,
     requirements_sha256: requirementsHash(ticket), head_sha: headSha, base_sha: baseSha,
-    environment, live_requirements: {compared: true, checked_at: '2026-10-28T00:00:00Z',
+    environment, branch: 'rdm/rdm-15-content-validation', pr_url: 'https://github.com/MudabbirulSaad/rust-download-manager/pull/2',
+    live_requirements: {compared: true, checked_at: '2026-10-28T00:00:00Z',
       issue_url: `https://rdm-mudabbirulsaad.atlassian.net/browse/${ticket.agent.key}`},
     acceptance: ticket.agent.acceptance_ids.map(id => ({id, status: 'passed',
       explanation: 'Controlled fixture exercised the criterion.', check_ids: ['rust-tests']})),
@@ -59,8 +60,20 @@ test('diff impact adds checks that a narrow ticket profile cannot omit', () => {
   assert(checks.ids.includes('desktop-webdriver'));
 });
 test('complete same-revision evidence is eligible for an independent merge review', () => {
-  const {handoff, args} = fixture(); args.phase = 'merge';
+  const {handoff, args} = fixture('B04', 'cloud'); args.phase = 'merge';
   assert.equal(validateHandoff(handoff, args).eligible, true);
+});
+test('a review claim cannot substitute local-only results for independent cloud execution', () => {
+  const {handoff, args} = fixture(); args.phase = 'merge';
+  assert.throws(() => validateHandoff(handoff, args), /Independent cloud rerun missing/);
+});
+test('handoffs require a source branch and the actual repository PR identity', () => {
+  for (const kind of ['branch', 'pr']) {
+    const {handoff, args} = fixture();
+    if (kind === 'branch') handoff.branch = '';
+    else handoff.pr_url = 'https://github.com/someone/other/pull/2';
+    assert.throws(() => validateHandoff(handoff, args), /source branch|pull request URL/);
+  }
 });
 test('unrun acceptance criteria and missing required checks prevent readiness', () => {
   const first = fixture(); first.handoff.acceptance[0].status = 'not-run';
@@ -85,7 +98,7 @@ test('changed head, changed base, dirty checkout and changed check registry inva
   }
 });
 test('a code fix requires fresh reports and a fresh review of that new head', () => {
-  const {handoff, args} = fixture(); const head = 'c'.repeat(40);
+  const {handoff, args} = fixture('B04', 'cloud'); const head = 'c'.repeat(40);
   args.headSha = head; args.phase = 'merge'; handoff.head_sha = head;
   args.reports[0].head_sha = head;
   assert.throws(() => validateHandoff(handoff, args), /Independent review/);
@@ -117,7 +130,7 @@ test('a reported pass still requires exit zero, matching commands and real log e
   }
 });
 test('merge requires an independent review and rejects unknown gate phases', () => {
-  const {handoff, args} = fixture(); args.phase = 'merge'; handoff.independent_review.status = 'not-run';
+  const {handoff, args} = fixture('B04', 'cloud'); args.phase = 'merge'; handoff.independent_review.status = 'not-run';
   assert.throws(() => validateHandoff(handoff, args), /Independent review/);
   args.phase = 'typo'; assert.throws(() => validateHandoff(handoff, args), /Unknown handoff gate phase/);
 });

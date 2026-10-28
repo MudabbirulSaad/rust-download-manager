@@ -103,6 +103,9 @@ npm run agent:handoff -- gate --ticket RDM-15 --handoff .agent-runs/RUN/handoff.
 
 The generated template has **not-run** criteria and an unverified live comparison.
 Fill each criterion with an explanation and check IDs that actually establish it.
+Fill the linked PR URL and source branch. Review/merge gates require independently
+executed cloud reports for every cloud-compatible check; local-only results cannot
+become an independent cloud review by changing a summary field.
 Attach reports/logs to the PR/CI and replace local-only report paths when importing
 them in cloud. External report objects include their durable `artifact_url`.
 Record limitations and migrations explicitly, including empty lists when applicable.
