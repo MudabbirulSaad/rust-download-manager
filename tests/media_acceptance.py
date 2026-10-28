@@ -83,6 +83,8 @@ def main():
         threading.Thread(target=server.serve_forever, daemon=True).start()
         base = f'http://127.0.0.1:{server.server_port}'
         page_origin=f'http://localhost:{server.server_port}'
+        network_reference=('#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\n'+base+'/video.mp4\n#EXT-X-ENDLIST\n').encode()
+        (fixtures/'network-reference.mp4').write_bytes(network_reference)
         env = {**os.environ, 'RDM_SOCKET': str(root / 'service.sock'), 'RDM_DATA_DIR': str(root / 'data')}
         proc = None
         def request(command, fail=False):
@@ -130,6 +132,14 @@ def main():
             direct=wait(direct_id,lambda j:j['status']=='completed')
             assert direct['expected_content']=='media' and direct['sha256']==hashlib.sha256(original).hexdigest()
             print('PASS direct HTTP media is probed before completion and retains the source hash',flush=True)
+            before=len(Fixture.seen)
+            reference=request({'type':'add','spec':{'url':base+'/network-reference.mp4','destination':str(root/'files')}})['id']
+            failed=wait(reference,lambda j:j['status'] in ['completed','needs_attention'])
+            assert failed['status']=='needs_attention' and failed['sha256'] is None
+            assert not Path(failed['destination'],failed['filename']).exists()
+            assert Path(failed['destination'],f'.rdm-{reference}.part').read_bytes()==network_reference
+            assert all(path=='/network-reference.mp4' for path,_ in Fixture.seen[before:]),'Verifier fetched an embedded network reference'
+            print('PASS media probing cannot follow embedded playlist/network references',flush=True)
             for path,body,provider in [('/invalid.mp4',invalid,False),('/truncated.mp4',truncated,False),('/invalid-page',invalid,True),('/truncated-page',truncated,True)]:
                 identifier=add(path) if provider else request({'type':'add','spec':{'url':base+path,'destination':str(root/'files')}})['id']
                 failed=wait(identifier,lambda j:j['status'] in ['completed','needs_attention'])
