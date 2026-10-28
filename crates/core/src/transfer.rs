@@ -586,39 +586,6 @@ fn complete_ranges(ranges: &[ByteRange], total: usize) -> bool {
     position == total
 }
 
-#[cfg(test)]
-mod checkpoint_tests {
-    use super::*;
-    #[test]
-    fn verification_requires_every_byte_to_be_checkpointed_even_if_the_file_is_preallocated() {
-        assert!(!complete_ranges(&[], 10));
-        assert!(!complete_ranges(&[ByteRange { start: 0, end: 5 }], 10));
-        assert!(!complete_ranges(
-            &[
-                ByteRange { start: 0, end: 4 },
-                ByteRange { start: 5, end: 10 }
-            ],
-            10
-        ));
-        assert!(!complete_ranges(
-            &[
-                ByteRange { start: 0, end: 6 },
-                ByteRange { start: 5, end: 10 }
-            ],
-            10
-        ));
-        assert!(complete_ranges(
-            &[
-                ByteRange { start: 5, end: 10 },
-                ByteRange { start: 0, end: 5 }
-            ],
-            10
-        ));
-        assert!(!complete_ranges(&[], 0));
-        assert!(complete_ranges(&[ByteRange { start: 0, end: 0 }], 0));
-    }
-}
-
 async fn verify_and_finalize(
     engine: &Arc<Engine>,
     id: &str,
@@ -766,4 +733,37 @@ pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> Result<()> {
         return Err(std::io::Error::last_os_error().into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod checkpoint_tests {
+    use super::*;
+    #[test]
+    fn verification_requires_every_byte_to_be_checkpointed_even_if_the_file_is_preallocated() {
+        assert!(!complete_ranges(&[], 10));
+        assert!(!complete_ranges(&[ByteRange { start: 0, end: 5 }], 10));
+        assert!(!complete_ranges(
+            &[
+                ByteRange { start: 0, end: 4 },
+                ByteRange { start: 5, end: 10 }
+            ],
+            10
+        ));
+        assert!(!complete_ranges(
+            &[
+                ByteRange { start: 0, end: 6 },
+                ByteRange { start: 5, end: 10 }
+            ],
+            10
+        ));
+        assert!(complete_ranges(
+            &[
+                ByteRange { start: 5, end: 10 },
+                ByteRange { start: 0, end: 5 }
+            ],
+            10
+        ));
+        assert!(!complete_ranges(&[], 0));
+        assert!(complete_ranges(&[ByteRange { start: 0, end: 0 }], 0));
+    }
 }
