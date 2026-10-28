@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {loadProject, validateContracts, requirementsHash, requiredChecks, validateHandoff, reconcileCompletion} from '../scripts/agent-workflow.mjs';
+import {loadProject, findTicket, validateContracts, requirementsHash, requiredChecks, validateHandoff, reconcileCompletion} from '../scripts/agent-workflow.mjs';
 
 const project = loadProject();
 const clone = value => structuredClone(value);
@@ -29,6 +29,15 @@ function fixture(code = 'B04', environment = 'local') {
 test('all original identities, 40 parent contracts and 66 native dependencies are retained', () => {
   assert.equal(validateContracts(project).dependencies, 66);
   assert.equal(validateContracts(project).tickets, 40);
+});
+test('focused subtasks are assignable by Jira key and retain their parent acceptance mapping', () => {
+  assert.equal(validateContracts(project).subtasks, 3);
+  assert.equal(findTicket(project, 'RDM-52').parent_key, 'RDM-18');
+  assert.deepEqual(findTicket(project, 'RDM-54').agent.dependencies, ['RDM-53']);
+  const copy = clone(project); copy.plan.subtasks[0].parent_key = 'RDM-999';
+  assert.throws(() => validateContracts(copy), /Invalid subtask parent/);
+  const other = clone(project); other.plan.subtasks[0].agent.covers_parent_criteria = ['AC-999'];
+  assert.throws(() => validateContracts(other), /Invalid parent acceptance/);
 });
 test('requirements changes invalidate a contract; readiness changes do not', () => {
   const t = clone(project.plan.tickets[0]); const original = requirementsHash(t);

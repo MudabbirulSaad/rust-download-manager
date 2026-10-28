@@ -11,6 +11,7 @@ run required checks, then merge and close only if every gate passes.**
 See [the agent workflow](docs/agent-workflow.md) for setup, ticket readiness, exact
 revision evidence and recovery after interrupted handoffs. `AGENTS.md` and the two
 repository skills carry the same guidance into local and cloud work.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and provenance rules.
 
 ## Install the Ubuntu build
 

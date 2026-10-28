@@ -3,7 +3,6 @@
 
 Re-run after deliberate contract changes; this never writes to Jira itself.
 """
-import csv
 import hashlib
 import json
 from pathlib import Path
@@ -78,7 +77,6 @@ NOTES = {
 }
 
 REFINE = {
- 'B07': 'Permanent distribution requires external signing/store ownership; use separate diagnostic, packaging and approval subtasks.',
  'B11': 'Confirm rule precedence and migration/override behavior before marking ready.',
  'B17': 'Confirm proxy precedence and supported SOCKS authentication combinations.',
  'B18': 'Define the measured bandwidth tolerance and fairness acceptance fixture.',
@@ -98,17 +96,21 @@ def semantic_hash(ticket):
 
 def description(ticket):
     a = ticket['agent']
-    sections = [ticket['context'], 'Outcome\n' + ticket['scope'],
-        'Boundaries\n' + '\n'.join(a['out_of_scope']),
-        'Starting points\n' + '\n'.join(ticket['files'] + a['fixtures']),
-        'Contracts\n' + '\n'.join(a['implementation_notes']),
-        'Dependencies\n' + (', '.join(a['dependencies']) or 'None; confirm live Jira before starting.'),
-        'Acceptance criteria\n' + '\n'.join(f'AC-{i+1}: {text}' for i, text in enumerate(ticket['criteria'])),
-        'Verification\n' + '\n'.join(a['verification_commands']),
-        'Required local evidence\n' + ('; '.join(a['local_evidence']) or 'No additional interactive local check declared; diff impact may add checks.'),
-        'Agent readiness\n' + a['readiness']['state'] + ': ' + a['readiness']['reason'],
-        'Delivery\nOne linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.',
-        f"Execution contract v{a['version']} | {a['key']} | planning ID {ticket['code']}\nRequirements SHA-256: {a['requirements_sha256']}\nSource: https://github.com/MudabbirulSaad/rust-download-manager\nJira owns live requirements and status. Historical evidence is not a new revision's test result."]
+    def bullets(values):
+        return '\n'.join('- ' + value for value in values)
+    sections = ['## Outcome\n' + ticket['scope'] + '\n\nCurrent limitation: ' + ticket['context'],
+        '## Boundaries\n' + bullets(a['out_of_scope']),
+        '## Starting points\n```text\n' + '\n'.join(dict.fromkeys(ticket['files'] + a['fixtures'])) + '\n```',
+        '## Contracts\n' + bullets(a['implementation_notes']),
+        '## Dependencies\n' + (', '.join(f'[{key}](https://rdm-mudabbirulsaad.atlassian.net/browse/{key})' for key in a['dependencies']) or 'None; confirm live Jira before starting.'),
+        '## Acceptance\n' + '\n'.join(f'- **AC-{i+1}:** {value}' for i, value in enumerate(ticket['criteria'])),
+        '## Verification\n```bash\n' + '\n'.join(a['verification_commands']) + '\n```',
+        '## Required local evidence\n' + (bullets(a['local_evidence']) or 'No additional interactive local check declared; diff impact may add checks.'),
+        '## Readiness\n`' + a['readiness']['state'] + '`: ' + a['readiness']['reason'],
+        '## Delivery\nOne linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed `rdm-implement-ticket` and `rdm-review-ticket` skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.',
+        f"## Execution metadata\nContract v{a['version']} | `{a['key']}` | planning ID `{ticket['code']}`\n\nRequirements SHA-256: `{a['requirements_sha256']}`\n\n[Source repository](https://github.com/MudabbirulSaad/rust-download-manager). Jira owns live requirements and status. Historical evidence is not a new revision's test result."]
+    if ticket.get('parent_key'):
+        sections.append('## Parent contract\n`' + ticket['parent_key'] + '`; covers ' + ', '.join(a['covers_parent_criteria']) + '. The parent acceptance criteria are preserved in full.')
     return '\n\n'.join(sections)
 
 def main():
@@ -129,7 +131,9 @@ def main():
         }.items():
             if profile in profiles: fixtures += files
         deps = [manifest['issue_keys'][c] for c in t['depends']]
-        if t['code'] in REFINE:
+        if t['code'] == 'B07':
+            state, reason = 'agent-blocked', 'Aggregate delivery is split into RDM-52 diagnostics, RDM-53 artifacts and RDM-54 signing/distribution; publisher approval blocks parent completion.'
+        elif t['code'] in REFINE:
             state, reason = 'needs-refinement', REFINE[t['code']]
         elif deps:
             state, reason = 'agent-blocked', 'Prerequisites must be delivered: ' + ', '.join(deps)
@@ -154,14 +158,11 @@ def main():
     payloads = [{'key': t['agent']['key'], 'summary': t['title'], 'description': description(t),
         'add_labels': [t['agent']['readiness']['state']],
         'remove_labels': ['agent-ready', 'needs-refinement', 'agent-blocked', 'agent-review-ready']}
-        for t in plan['tickets']]
+        for t in plan['tickets'] + plan.get('subtasks', [])]
     (ROOT / 'planning/jira-agent-updates.json').write_text(json.dumps(payloads, indent=2, ensure_ascii=False) + '\n')
-    with (ROOT / 'planning/jira-agent-updates.csv').open('w', newline='') as out:
-        writer = csv.writer(out, lineterminator='\n')
-        writer.writerow(['Issue key', 'Summary', 'Description', 'Labels', 'Labels', 'Labels'])
-        for t in plan['tickets']:
-            writer.writerow([t['agent']['key'], t['title'], description(t),
-                t['tier'].lower(), 'rdm-' + t['code'].lower(), t['agent']['readiness']['state']])
+    # Use field-level API updates for existing issues. Jira's legacy CSV updater
+    # clears epic parents when hierarchy fields are omitted, so do not generate
+    # a partial CSV that appears safe to re-import.
     print(f"Prepared {len(payloads)} existing-ticket execution contracts; no Jira writes performed.")
 
 if __name__ == '__main__':

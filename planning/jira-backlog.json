@@ -581,8 +581,8 @@
           "package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI"
         ],
         "readiness": {
-          "state": "needs-refinement",
-          "reason": "Permanent distribution requires external signing/store ownership; use separate diagnostic, packaging and approval subtasks."
+          "state": "agent-blocked",
+          "reason": "Aggregate delivery is split into RDM-52 diagnostics, RDM-53 artifacts and RDM-54 signing/distribution; publisher approval blocks parent completion."
         },
         "acceptance_ids": [
           "AC-1",
@@ -3168,5 +3168,255 @@
     }
   ],
   "agent_contract_version": 1,
-  "repository": "https://github.com/MudabbirulSaad/rust-download-manager"
+  "repository": "https://github.com/MudabbirulSaad/rust-download-manager",
+  "subtasks": [
+    {
+      "code": "S01",
+      "parent_key": "RDM-18",
+      "epic": "E2",
+      "tier": "P0",
+      "type": "Subtask",
+      "title": "Expose component versions and actionable browser connection diagnostics",
+      "context": "Connection health currently omits component compatibility and guided recovery.",
+      "scope": "Expose desktop, extension, native host, backend and provider versions; identify missing or incompatible components and denied Firefox Snap portal permission with specific recovery actions.",
+      "criteria": [
+        "The setup view reports every installed component version and distinguishes missing components from incompatible versions.",
+        "A controlled mismatch yields an actionable upgrade or reload instruction without discarding a browser download.",
+        "An actual local Firefox Snap portal denial is diagnosed with an explicit retry action; access is never silently granted."
+      ],
+      "files": [
+        "extensions/src/popup.ts",
+        "extensions/src/shared.ts",
+        "crates/backend/src/main.rs",
+        "scripts/build-extensions.mjs",
+        "README.md"
+      ],
+      "depends": [],
+      "agent": {
+        "version": 1,
+        "key": "RDM-52",
+        "epic_key": "RDM-6",
+        "requirements_sha256": "f77bdf0251331b3be9333b873816213a49f22fc7d47b71f5a95b47156afaa2db",
+        "dependencies": [],
+        "profiles": [
+          "common",
+          "browser",
+          "desktop"
+        ],
+        "starting_files": [
+          "extensions/src/popup.ts",
+          "extensions/src/shared.ts",
+          "crates/backend/src/main.rs",
+          "scripts/build-extensions.mjs",
+          "README.md"
+        ],
+        "fixtures": [
+          "tests/agent-workflow.test.mjs",
+          "tests/browser_chromium.mjs",
+          "tests/browser_firefox_snap.py",
+          "tests/extension.test.ts",
+          "tests/App.test.tsx",
+          "tests/desktop_webdriver.py"
+        ],
+        "implementation_notes": [
+          "Preserve scoped credentials, durable native-host acknowledgement and existing typed protocol compatibility.",
+          "Update generated TypeScript when Rust protocol types change."
+        ],
+        "out_of_scope": [
+          "RDM-18 remains open until all parent acceptance criteria are met.",
+          "Store publication is excluded from RDM-52/RDM-53; RDM-54 requires explicit publisher authorization.",
+          "Do not persist browser cookies, signing keys or store credentials in source or evidence."
+        ],
+        "verification_commands": [
+          "npm run agent:ticket -- RDM-52",
+          "npm run agent:validate",
+          "npm run agent:check -- --ticket RDM-52 --environment local --base origin/main",
+          "npm run agent:check -- --ticket RDM-52 --environment cloud --base origin/main"
+        ],
+        "local_evidence": [
+          "Final-revision Brave and Firefox Snap handoff reports; Firefox Snap portal permission requires a real local user action."
+        ],
+        "readiness": {
+          "state": "agent-ready",
+          "reason": "No implementation prerequisites; local browser evidence is required before review."
+        },
+        "acceptance_ids": [
+          "AC-1",
+          "AC-2",
+          "AC-3"
+        ],
+        "covers_parent_criteria": [
+          "AC-2",
+          "AC-3"
+        ]
+      }
+    },
+    {
+      "code": "S02",
+      "parent_key": "RDM-18",
+      "epic": "E2",
+      "tier": "P0",
+      "type": "Subtask",
+      "title": "Build reproducible extension artifacts for permanent browser distribution",
+      "context": "Developer extension directories are available but permanent distribution needs repeatable, reviewable artifacts.",
+      "scope": "Build Brave and Firefox distribution archives from pinned source; preserve stable extension/native-host identities; validate manifests and package layout; document submission and upgrade procedures.",
+      "criteria": [
+        "Two clean builds of the same revision produce identical extension archive hashes using documented commands.",
+        "Manifest and native-host identities remain stable and declared permissions match the documented capture behavior.",
+        "Unpacked artifacts pass local Brave and Firefox Snap handoff checks; documentation clearly distinguishes a test install from approved permanent distribution."
+      ],
+      "files": [
+        "extensions/src/popup.ts",
+        "extensions/src/shared.ts",
+        "crates/backend/src/main.rs",
+        "scripts/build-extensions.mjs",
+        "README.md"
+      ],
+      "depends": [],
+      "agent": {
+        "version": 1,
+        "key": "RDM-53",
+        "epic_key": "RDM-6",
+        "requirements_sha256": "86955f0aa5aa81e4423b1f8199c81b6fcb235d55e9294113c1a20b79f85fd126",
+        "dependencies": [],
+        "profiles": [
+          "common",
+          "browser",
+          "package"
+        ],
+        "starting_files": [
+          "extensions/src/popup.ts",
+          "extensions/src/shared.ts",
+          "crates/backend/src/main.rs",
+          "scripts/build-extensions.mjs",
+          "README.md"
+        ],
+        "fixtures": [
+          "tests/agent-workflow.test.mjs",
+          "tests/browser_chromium.mjs",
+          "tests/browser_firefox_snap.py",
+          "tests/extension.test.ts",
+          "tests/io_failures.py",
+          "packaging/Dockerfile.runtime"
+        ],
+        "implementation_notes": [
+          "Preserve scoped credentials, durable native-host acknowledgement and existing typed protocol compatibility.",
+          "Update generated TypeScript when Rust protocol types change."
+        ],
+        "out_of_scope": [
+          "RDM-18 remains open until all parent acceptance criteria are met.",
+          "Store publication is excluded from RDM-52/RDM-53; RDM-54 requires explicit publisher authorization.",
+          "Do not persist browser cookies, signing keys or store credentials in source or evidence."
+        ],
+        "verification_commands": [
+          "npm run agent:ticket -- RDM-53",
+          "npm run agent:validate",
+          "npm run agent:check -- --ticket RDM-53 --environment local --base origin/main",
+          "npm run agent:check -- --ticket RDM-53 --environment cloud --base origin/main"
+        ],
+        "local_evidence": [
+          "Final-revision Brave and Firefox Snap handoff reports; Firefox Snap portal permission requires a real local user action.",
+          "Installed-package evidence on Ubuntu 24.04 and 26.04."
+        ],
+        "readiness": {
+          "state": "agent-ready",
+          "reason": "Artifact preparation needs no store credentials; publication remains in RDM-54."
+        },
+        "acceptance_ids": [
+          "AC-1",
+          "AC-2",
+          "AC-3"
+        ],
+        "covers_parent_criteria": [
+          "AC-1"
+        ]
+      }
+    },
+    {
+      "code": "S03",
+      "parent_key": "RDM-18",
+      "epic": "E2",
+      "tier": "P0",
+      "type": "Subtask",
+      "title": "Complete Firefox signing and Brave distribution approval with restart evidence",
+      "context": "Permanent browser installation requires publisher ownership, signing and external approval.",
+      "scope": "After RDM-53 and explicit publisher authorization, submit the reviewed artifacts through supported Firefox and Brave channels; record approval identities, hashes and restart/upgrade evidence without committing credentials.",
+      "criteria": [
+        "Approved permanent-install artifacts and publisher records match the reviewed source revision and the RDM-53 artifact hashes.",
+        "Both extensions survive browser restart through their supported permanent channels and retain native-host connectivity.",
+        "Firefox Snap passes its real portal grant and denial/recovery paths; record any unavailable external approval as blocked, never Passed."
+      ],
+      "files": [
+        "extensions/src/popup.ts",
+        "extensions/src/shared.ts",
+        "crates/backend/src/main.rs",
+        "scripts/build-extensions.mjs",
+        "README.md"
+      ],
+      "depends": [
+        "S02"
+      ],
+      "agent": {
+        "version": 1,
+        "key": "RDM-54",
+        "epic_key": "RDM-6",
+        "requirements_sha256": "8a05df346fc0b553da199c52fd254d835cc7000f0f030fd355b642415a27a9ac",
+        "dependencies": [
+          "RDM-53"
+        ],
+        "profiles": [
+          "common",
+          "browser",
+          "package"
+        ],
+        "starting_files": [
+          "extensions/src/popup.ts",
+          "extensions/src/shared.ts",
+          "crates/backend/src/main.rs",
+          "scripts/build-extensions.mjs",
+          "README.md"
+        ],
+        "fixtures": [
+          "tests/agent-workflow.test.mjs",
+          "tests/browser_chromium.mjs",
+          "tests/browser_firefox_snap.py",
+          "tests/extension.test.ts",
+          "tests/io_failures.py",
+          "packaging/Dockerfile.runtime"
+        ],
+        "implementation_notes": [
+          "Preserve scoped credentials, durable native-host acknowledgement and existing typed protocol compatibility.",
+          "Update generated TypeScript when Rust protocol types change."
+        ],
+        "out_of_scope": [
+          "RDM-18 remains open until all parent acceptance criteria are met.",
+          "Store publication is excluded from RDM-52/RDM-53; RDM-54 requires explicit publisher authorization.",
+          "Do not persist browser cookies, signing keys or store credentials in source or evidence."
+        ],
+        "verification_commands": [
+          "npm run agent:ticket -- RDM-54",
+          "npm run agent:validate",
+          "npm run agent:check -- --ticket RDM-54 --environment local --base origin/main",
+          "npm run agent:check -- --ticket RDM-54 --environment cloud --base origin/main"
+        ],
+        "local_evidence": [
+          "Final-revision Brave and Firefox Snap handoff reports; Firefox Snap portal permission requires a real local user action.",
+          "Installed-package evidence on Ubuntu 24.04 and 26.04."
+        ],
+        "readiness": {
+          "state": "agent-blocked",
+          "reason": "Requires RDM-53 plus publisher ownership, signing credentials and external distribution approval; no credentials have been provided."
+        },
+        "acceptance_ids": [
+          "AC-1",
+          "AC-2",
+          "AC-3"
+        ],
+        "covers_parent_criteria": [
+          "AC-1",
+          "AC-3"
+        ]
+      }
+    }
+  ]
 }

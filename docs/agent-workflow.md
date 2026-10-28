@@ -59,7 +59,13 @@ reviewed contracts and existing-issue update payloads; it does not write to Jira
 
 Epics organize work and do not represent independently executable assignments.
 RDM-18 separates diagnostics, packaging, and external signing/distribution approval.
+Its subtasks are RDM-52, RDM-53 and RDM-54. Their execution contracts live in the
+same planning JSON under `subtasks` and are accepted by every ticket command.
 Do not close a parent until all its criteria and required child deliverables pass.
+Apply existing-issue payloads through field-level Jira edits. The legacy CSV
+updater clears epic parents when hierarchy fields are omitted; do not use partial
+CSV imports for these updates. Verify preserved parents, priorities and native
+dependencies after any bulk operation.
 
 ## Checks and evidence
 

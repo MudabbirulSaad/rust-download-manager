@@ -26,12 +26,20 @@ export function loadProject(root = ROOT) {
 export function validateContracts({root, plan, manifest, registry}) {
   invariant(plan.agent_contract_version === 1, 'Unsupported execution contract version');
   invariant(plan.tickets.length === 40 && plan.epics.length === 7, 'Roadmap identities/count changed unexpectedly');
-  const codes = new Map(plan.tickets.map(t => [t.code, t]));
-  invariant(codes.size === 40, 'Duplicate planning code');
+  const subtasks = plan.subtasks ?? [];
+  const all = [...plan.tickets, ...subtasks];
+  const codes = new Map(all.map(t => [t.code, t]));
+  invariant(codes.size === all.length, 'Duplicate planning code');
   const keys = new Set(); let links = 0;
-  for (const t of plan.tickets) {
+  for (const t of all) {
     const a = t.agent;
-    invariant(a?.version === 1 && a.key === manifest.issue_keys[t.code], `Missing/mismatched key: ${t.code}`);
+    const isSubtask = subtasks.includes(t);
+    invariant(a?.version === 1 && (isSubtask ? /^RDM-\d+$/.test(a.key) : a.key === manifest.issue_keys[t.code]), `Missing/mismatched key: ${t.code}`);
+    if (isSubtask) {
+      const parent = plan.tickets.find(p => p.agent.key === t.parent_key);
+      invariant(parent && parent.epic === t.epic, `Invalid subtask parent: ${a.key}`);
+      invariant(a.covers_parent_criteria?.length && a.covers_parent_criteria.every(id => parent.agent.acceptance_ids.includes(id)), `Invalid parent acceptance mapping: ${a.key}`);
+    }
     invariant(!keys.has(a.key), `Duplicate Jira key ${a.key}`); keys.add(a.key);
     invariant(a.epic_key === manifest.issue_keys[t.epic], `Wrong epic for ${a.key}`);
     invariant(a.requirements_sha256 === requirementsHash(t), `Stale requirements hash: ${a.key}`);
@@ -40,8 +48,8 @@ export function validateContracts({root, plan, manifest, registry}) {
     invariant(a.profiles.includes('common') && a.profiles.every(p => registry.profiles[p]), `Invalid check profile: ${a.key}`);
     invariant(['agent-ready', 'needs-refinement', 'agent-blocked'].includes(a.readiness.state) && text(a.readiness.reason), `Invalid readiness: ${a.key}`);
     invariant(a.out_of_scope.length && a.implementation_notes.length && a.verification_commands.length, `Incomplete contract: ${a.key}`);
-    invariant(JSON.stringify(a.dependencies) === JSON.stringify(t.depends.map(c => manifest.issue_keys[c])), `Dependency keys differ: ${a.key}`);
-    for (const code of t.depends) { invariant(codes.has(code), `Unknown dependency ${code}`); links++; }
+    invariant(JSON.stringify(a.dependencies) === JSON.stringify(t.depends.map(c => codes.get(c)?.agent.key)), `Dependency keys differ: ${a.key}`);
+    for (const code of t.depends) { invariant(codes.has(code), `Unknown dependency ${code}`); if (!isSubtask) links++; }
     for (const file of [...t.files, ...a.fixtures]) invariant(existsSync(join(root, file)), `Missing starting point/fixture: ${a.key}: ${file}`);
   }
   invariant(links === manifest.dependency_links, 'Dependency count differs from imported Jira links');
@@ -60,12 +68,13 @@ export function validateContracts({root, plan, manifest, registry}) {
       invariant(definition?.command?.length && definition.command.every(text), `Invalid check ${id}`);
     }
   }
-  return {tickets: keys.size, epics: plan.epics.length, dependencies: links,
+  return {tickets: plan.tickets.length, subtasks: subtasks.length, epics: plan.epics.length, dependencies: links,
+    subtask_dependencies: subtasks.reduce((count, t) => count + t.depends.length, 0),
     readiness: Object.fromEntries(unique(plan.tickets.map(t => t.agent.readiness.state)).map(s => [s, plan.tickets.filter(t => t.agent.readiness.state === s).length]))};
 }
 
 export function findTicket(project, key) {
-  const ticket = project.plan.tickets.find(t => t.agent.key === key || t.code === key);
+  const ticket = [...project.plan.tickets, ...(project.plan.subtasks ?? [])].find(t => t.agent.key === key || t.code === key);
   invariant(ticket, `Unknown RDM ticket: ${key}`); return ticket;
 }
 
