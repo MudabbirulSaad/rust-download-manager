@@ -248,26 +248,46 @@ async fn verify_media(path: &Path, size: u64, token: &CancellationToken) -> Resu
     let probe: serde_json::Value = serde_json::from_slice(&output.0)
         .context("Invalid FFprobe result; the partial file was kept")?;
     ensure!(
-        probe["streams"]
-            .as_array()
-            .is_some_and(|streams| streams.iter().any(|stream| {
-                matches!(stream["codec_type"].as_str(), Some("audio" | "video"))
-                    && stream["codec_name"]
-                        .as_str()
-                        .is_some_and(|codec| codec != "unknown")
-                    && stream["nb_read_packets"]
-                        .as_str()
-                        .and_then(|n| n.parse::<u64>().ok())
-                        .is_some_and(|n| n > 0)
-            })),
-        "Media has no readable audio or video packets. The partial file was kept. Choose Restart or refresh the source."
+        readable_streams(&probe),
+        "Media has missing or unreadable audio/video streams. The partial file was kept. Choose Restart or refresh the source."
     );
     Ok(())
+}
+
+fn readable_streams(probe: &serde_json::Value) -> bool {
+    let Some(streams) = probe["streams"].as_array() else {
+        return false;
+    };
+    let streams: Vec<_> = streams
+        .iter()
+        .filter(|stream| matches!(stream["codec_type"].as_str(), Some("audio" | "video")))
+        .collect();
+    !streams.is_empty()
+        && streams.iter().all(|stream| {
+            stream["codec_name"]
+                .as_str()
+                .is_some_and(|codec| codec != "unknown")
+                && stream["nb_read_packets"]
+                    .as_str()
+                    .and_then(|n| n.parse::<u64>().ok())
+                    .is_some_and(|n| n > 0)
+        })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_readable_audio_track_cannot_mask_an_unreadable_video_track() {
+        let mut probe = serde_json::json!({"streams":[
+            {"codec_type":"audio","codec_name":"aac","nb_read_packets":"20"},
+            {"codec_type":"video","codec_name":"unknown","nb_read_packets":"0"}
+        ]});
+        assert!(!readable_streams(&probe));
+        probe["streams"][1]["codec_name"] = "h264".into();
+        probe["streams"][1]["nb_read_packets"] = "30".into();
+        assert!(readable_streams(&probe));
+    }
     #[test]
     fn recognizes_html_without_treating_an_embedded_tag_in_binary_as_a_page() {
         for sample in [
