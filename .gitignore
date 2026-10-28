@@ -1,0 +1,24 @@
+/target/
+/node_modules/
+/dist/
+/extensions/dist/
+/build/
+/.cache/
+*.log
+*.deb
+
+__pycache__/
+*.pyc
+*.tsbuildinfo
+
+/web-dist/
+
+# Machine-local tools and evidence are not part of the public source release.
+/.agents/skills/reverse-engineer-anything/
+/planning/*.jpg
+/planning/*.png
+/.agent-runs/
+/.env
+/.env.*
+!/.env.example
+/src-tauri/gen/

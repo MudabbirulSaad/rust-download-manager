@@ -1,0 +1,9 @@
+.git
+build
+.agents
+target
+node_modules
+dist
+extensions/dist
+
+web-dist

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Rust Download Manager", "version": "0.2.2", "identifier": "org.rdm.desktop",
+  "build": {"beforeDevCommand":"npm run dev","beforeBuildCommand":"npm run build","devUrl":"http://127.0.0.1:1420","frontendDist":"../web-dist"},
+  "app": {
+    "windows":[{"title":"Rust Download Manager","width":1280,"height":820,"minWidth":900,"minHeight":600}],
+    "security":{"csp":"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: data:; connect-src ipc: http://ipc.localhost"}
+  },
+  "bundle":{"active":false,"icon":["icons/128x128.png"]}
+}

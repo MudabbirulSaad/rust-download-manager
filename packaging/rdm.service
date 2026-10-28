@@ -1,0 +1,15 @@
+[Unit]
+Description=Rust Download Manager background service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/rdm/rdm-backend serve
+Restart=on-failure
+RestartSec=3
+UMask=0077
+TimeoutStopSec=15
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

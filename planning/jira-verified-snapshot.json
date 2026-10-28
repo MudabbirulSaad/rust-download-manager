@@ -1,0 +1,949 @@
+{
+  "site": "https://rdm-mudabbirulsaad.atlassian.net",
+  "project": "RDM",
+  "verified_date": "2026-10-28",
+  "issues": [
+    {
+      "code": "E1",
+      "key": "RDM-5",
+      "title": "Reliable downloads and recovery",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": null,
+      "labels": [
+        "p0",
+        "rdm-e1"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E2",
+      "key": "RDM-6",
+      "title": "Browser integration and installation",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": null,
+      "labels": [
+        "p0",
+        "rdm-e2"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E3",
+      "key": "RDM-7",
+      "title": "Video detection and media workflows",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": null,
+      "labels": [
+        "p0",
+        "rdm-e3"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E4",
+      "key": "RDM-8",
+      "title": "Download library, queues and organization",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": null,
+      "labels": [
+        "p1",
+        "rdm-e4"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E5",
+      "key": "RDM-9",
+      "title": "Ubuntu desktop experience",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": null,
+      "labels": [
+        "p1",
+        "rdm-e5"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E6",
+      "key": "RDM-10",
+      "title": "Network policies and advanced transfers",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": null,
+      "labels": [
+        "p1",
+        "rdm-e6"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "E7",
+      "key": "RDM-11",
+      "title": "Open-source delivery, quality and updates",
+      "type": "Epic",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": null,
+      "labels": [
+        "p1",
+        "rdm-e7"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    },
+    {
+      "code": "B01",
+      "key": "RDM-12",
+      "title": "Refresh expired download addresses without discarding valid partial data",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-5",
+      "labels": [
+        "p0",
+        "rdm-b01"
+      ],
+      "blocks": [
+        "RDM-13",
+        "RDM-26",
+        "RDM-49"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B02",
+      "key": "RDM-13",
+      "title": "Restore public browser request context and guide reauthorization after backend restart",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-5",
+      "labels": [
+        "p0",
+        "rdm-b02"
+      ],
+      "blocks": [
+        "RDM-16",
+        "RDM-27",
+        "RDM-49"
+      ],
+      "blocked_by": [
+        "RDM-12"
+      ]
+    },
+    {
+      "code": "B03",
+      "key": "RDM-14",
+      "title": "Associate detected streams with the intended video and embedded frame",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-7",
+      "labels": [
+        "p0",
+        "rdm-b03"
+      ],
+      "blocks": [
+        "RDM-25",
+        "RDM-49",
+        "RDM-50"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B04",
+      "key": "RDM-15",
+      "title": "Validate expected file content and completed media before reporting success",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-5",
+      "labels": [
+        "p0",
+        "rdm-b04"
+      ],
+      "blocks": [
+        "RDM-20",
+        "RDM-25",
+        "RDM-32",
+        "RDM-43",
+        "RDM-49"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B05",
+      "key": "RDM-16",
+      "title": "Recover automatically when connectivity or the background service returns",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-5",
+      "labels": [
+        "p0",
+        "rdm-b05"
+      ],
+      "blocks": [
+        "RDM-30",
+        "RDM-49"
+      ],
+      "blocked_by": [
+        "RDM-13"
+      ]
+    },
+    {
+      "code": "B06",
+      "key": "RDM-17",
+      "title": "Check destination space and manage abandoned partial downloads",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-5",
+      "labels": [
+        "p0",
+        "rdm-b06"
+      ],
+      "blocks": [
+        "RDM-19",
+        "RDM-49"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B07",
+      "key": "RDM-18",
+      "title": "Provide persistent browser installation and component-version health checks",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-6",
+      "labels": [
+        "p0",
+        "rdm-b07"
+      ],
+      "blocks": [
+        "RDM-23",
+        "RDM-33",
+        "RDM-34",
+        "RDM-46",
+        "RDM-49",
+        "RDM-50"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B08",
+      "key": "RDM-19",
+      "title": "Edit download properties and distinguish history removal from file deletion",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b08"
+      ],
+      "blocks": [
+        "RDM-20",
+        "RDM-22",
+        "RDM-31",
+        "RDM-44"
+      ],
+      "blocked_by": [
+        "RDM-17"
+      ]
+    },
+    {
+      "code": "B09",
+      "key": "RDM-20",
+      "title": "Show download information with Download now and Download later actions",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b09"
+      ],
+      "blocks": [
+        "RDM-22",
+        "RDM-24",
+        "RDM-39",
+        "RDM-42"
+      ],
+      "blocked_by": [
+        "RDM-15",
+        "RDM-19"
+      ]
+    },
+    {
+      "code": "B10",
+      "key": "RDM-21",
+      "title": "Reorder, prioritize and move downloads between queues fairly",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b10"
+      ],
+      "blocks": [
+        "RDM-29",
+        "RDM-35",
+        "RDM-37",
+        "RDM-44",
+        "RDM-45"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B11",
+      "key": "RDM-22",
+      "title": "Route downloads to editable categories and destination folders",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b11"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-19",
+        "RDM-20"
+      ]
+    },
+    {
+      "code": "B12",
+      "key": "RDM-23",
+      "title": "Configure browser capture rules and separate public capture from cookie consent",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-6",
+      "labels": [
+        "p1",
+        "rdm-b12"
+      ],
+      "blocks": [
+        "RDM-24",
+        "RDM-46"
+      ],
+      "blocked_by": [
+        "RDM-18"
+      ]
+    },
+    {
+      "code": "B13",
+      "key": "RDM-24",
+      "title": "Collect page links and import bulk URL lists with a selection preview",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b13"
+      ],
+      "blocks": [
+        "RDM-41"
+      ],
+      "blocked_by": [
+        "RDM-20",
+        "RDM-23"
+      ]
+    },
+    {
+      "code": "B14",
+      "key": "RDM-25",
+      "title": "List available video formats instead of offering only a height ceiling",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-7",
+      "labels": [
+        "p1",
+        "rdm-b14"
+      ],
+      "blocks": [
+        "RDM-26",
+        "RDM-37"
+      ],
+      "blocked_by": [
+        "RDM-14",
+        "RDM-15"
+      ]
+    },
+    {
+      "code": "B15",
+      "key": "RDM-26",
+      "title": "Preserve useful video titles and show duration and fragment progress",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-7",
+      "labels": [
+        "p1",
+        "rdm-b15"
+      ],
+      "blocks": [
+        "RDM-37"
+      ],
+      "blocked_by": [
+        "RDM-12",
+        "RDM-25"
+      ]
+    },
+    {
+      "code": "B16",
+      "key": "RDM-27",
+      "title": "Support scoped HTTP authentication and explicitly saved keyring credentials",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-10",
+      "labels": [
+        "p1",
+        "rdm-b16"
+      ],
+      "blocks": [
+        "RDM-28",
+        "RDM-40"
+      ],
+      "blocked_by": [
+        "RDM-13"
+      ]
+    },
+    {
+      "code": "B17",
+      "key": "RDM-28",
+      "title": "Configure authenticated proxies and diagnose browser/backend route mismatches",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-10",
+      "labels": [
+        "p1",
+        "rdm-b17"
+      ],
+      "blocks": [
+        "RDM-40"
+      ],
+      "blocked_by": [
+        "RDM-27"
+      ]
+    },
+    {
+      "code": "B18",
+      "key": "RDM-29",
+      "title": "Apply live bandwidth limits fairly across HTTP and video jobs",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-10",
+      "labels": [
+        "p1",
+        "rdm-b18"
+      ],
+      "blocks": [
+        "RDM-36",
+        "RDM-38"
+      ],
+      "blocked_by": [
+        "RDM-21"
+      ]
+    },
+    {
+      "code": "B19",
+      "key": "RDM-30",
+      "title": "Add Ubuntu tray controls, actionable notifications and optional sleep inhibition",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-9",
+      "labels": [
+        "p1",
+        "rdm-b19"
+      ],
+      "blocks": [
+        "RDM-39",
+        "RDM-43",
+        "RDM-44"
+      ],
+      "blocked_by": [
+        "RDM-16"
+      ]
+    },
+    {
+      "code": "B20",
+      "key": "RDM-31",
+      "title": "Scale history beyond 1000 jobs with filters, retention and tested backup restore",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-8",
+      "labels": [
+        "p1",
+        "rdm-b20"
+      ],
+      "blocks": [
+        "RDM-41",
+        "RDM-49"
+      ],
+      "blocked_by": [
+        "RDM-19"
+      ]
+    },
+    {
+      "code": "B21",
+      "key": "RDM-32",
+      "title": "Verify downloaded files against supplied SHA-256 values and checksum lists",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-5",
+      "labels": [
+        "p1",
+        "rdm-b21"
+      ],
+      "blocks": [
+        "RDM-42",
+        "RDM-43"
+      ],
+      "blocked_by": [
+        "RDM-15"
+      ]
+    },
+    {
+      "code": "B22",
+      "key": "RDM-33",
+      "title": "Deliver signed application, extension and media-provider updates without disrupting jobs",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-11",
+      "labels": [
+        "p1",
+        "rdm-b22"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-18",
+        "RDM-47",
+        "RDM-48"
+      ]
+    },
+    {
+      "code": "B23",
+      "key": "RDM-34",
+      "title": "Provide built-in connection diagnostics and a redacted support report",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-11",
+      "labels": [
+        "p1",
+        "rdm-b23"
+      ],
+      "blocks": [
+        "RDM-45",
+        "RDM-50"
+      ],
+      "blocked_by": [
+        "RDM-18"
+      ]
+    },
+    {
+      "code": "B24",
+      "key": "RDM-35",
+      "title": "Schedule one-time and weekday queue windows with completion actions",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-8",
+      "labels": [
+        "p2",
+        "rdm-b24"
+      ],
+      "blocks": [
+        "RDM-36",
+        "RDM-41"
+      ],
+      "blocked_by": [
+        "RDM-21"
+      ]
+    },
+    {
+      "code": "B25",
+      "key": "RDM-36",
+      "title": "Apply data quotas, metered-network rules and battery-aware download policies",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-10",
+      "labels": [
+        "p2",
+        "rdm-b25"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-29",
+        "RDM-35"
+      ]
+    },
+    {
+      "code": "B26",
+      "key": "RDM-37",
+      "title": "Add audio-only, subtitles, chapters and previewed playlist selection",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-7",
+      "labels": [
+        "p2",
+        "rdm-b26"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-21",
+        "RDM-25",
+        "RDM-26"
+      ]
+    },
+    {
+      "code": "B27",
+      "key": "RDM-38",
+      "title": "Benchmark adaptive chunk sizing and connection tuning",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-10",
+      "labels": [
+        "p2",
+        "rdm-b27"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-29",
+        "RDM-49"
+      ]
+    },
+    {
+      "code": "B28",
+      "key": "RDM-39",
+      "title": "Add opt-in clipboard monitoring and desktop link drag-and-drop",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-9",
+      "labels": [
+        "p2",
+        "rdm-b28"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-20",
+        "RDM-30"
+      ]
+    },
+    {
+      "code": "B29",
+      "key": "RDM-40",
+      "title": "Add FTP and FTPS transfers through the common download lifecycle",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-10",
+      "labels": [
+        "p2",
+        "rdm-b29"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-27",
+        "RDM-28",
+        "RDM-49"
+      ]
+    },
+    {
+      "code": "B30",
+      "key": "RDM-41",
+      "title": "Build a bounded website grabber with filtered offline downloads",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-8",
+      "labels": [
+        "p2",
+        "rdm-b30"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-24",
+        "RDM-31",
+        "RDM-35"
+      ]
+    },
+    {
+      "code": "B31",
+      "key": "RDM-42",
+      "title": "Preview supported ZIP archive contents before full download",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-8",
+      "labels": [
+        "p2",
+        "rdm-b31"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-20",
+        "RDM-32"
+      ]
+    },
+    {
+      "code": "B32",
+      "key": "RDM-43",
+      "title": "Run explicitly configured completion scans and post-download actions",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-9",
+      "labels": [
+        "p2",
+        "rdm-b32"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-15",
+        "RDM-30",
+        "RDM-32"
+      ]
+    },
+    {
+      "code": "B33",
+      "key": "RDM-44",
+      "title": "Customize table layouts and keyboard shortcuts with localization support",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-9",
+      "labels": [
+        "p2",
+        "rdm-b33"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-19",
+        "RDM-21",
+        "RDM-30"
+      ]
+    },
+    {
+      "code": "B34",
+      "key": "RDM-45",
+      "title": "Expose a friendly rdm command-line interface for desktop automation",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-9",
+      "labels": [
+        "p2",
+        "rdm-b34"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-21",
+        "RDM-34"
+      ]
+    },
+    {
+      "code": "B35",
+      "key": "RDM-46",
+      "title": "Test and document additional Chromium browsers and browser profiles",
+      "type": "Feature",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Low",
+      "parent": "RDM-6",
+      "labels": [
+        "p2",
+        "rdm-b35"
+      ],
+      "blocks": [],
+      "blocked_by": [
+        "RDM-18",
+        "RDM-23",
+        "RDM-50"
+      ]
+    },
+    {
+      "code": "B36",
+      "key": "RDM-47",
+      "title": "Initialize and publish the GPL-3.0-only source repository with contribution guidance",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-11",
+      "labels": [
+        "p1",
+        "rdm-b36"
+      ],
+      "blocks": [
+        "RDM-33",
+        "RDM-48"
+      ],
+      "blocked_by": []
+    },
+    {
+      "code": "B37",
+      "key": "RDM-48",
+      "title": "Extend CI to Ubuntu 24.04 and 26.04 packages and browser regressions",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-11",
+      "labels": [
+        "p1",
+        "rdm-b37"
+      ],
+      "blocks": [
+        "RDM-33",
+        "RDM-49"
+      ],
+      "blocked_by": [
+        "RDM-47"
+      ]
+    },
+    {
+      "code": "B38",
+      "key": "RDM-49",
+      "title": "Gate 1.0 with extended recovery, large-library and installed-package acceptance tests",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-11",
+      "labels": [
+        "p0",
+        "rdm-b38"
+      ],
+      "blocks": [
+        "RDM-38",
+        "RDM-40"
+      ],
+      "blocked_by": [
+        "RDM-12",
+        "RDM-13",
+        "RDM-14",
+        "RDM-15",
+        "RDM-16",
+        "RDM-17",
+        "RDM-18",
+        "RDM-31",
+        "RDM-48"
+      ]
+    },
+    {
+      "code": "B39",
+      "key": "RDM-50",
+      "title": "Publish the supported-site matrix and repeatable provider compatibility checks",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "High",
+      "parent": "RDM-11",
+      "labels": [
+        "p1",
+        "rdm-b39"
+      ],
+      "blocks": [
+        "RDM-46"
+      ],
+      "blocked_by": [
+        "RDM-14",
+        "RDM-18",
+        "RDM-34"
+      ]
+    },
+    {
+      "code": "B40",
+      "key": "RDM-51",
+      "title": "Define RDM 1.0 scope, board workflow and evidence-based Definition of Done",
+      "type": "Task",
+      "status": "To Do",
+      "status_category": "To Do",
+      "priority": "Highest",
+      "parent": "RDM-11",
+      "labels": [
+        "p0",
+        "rdm-b40"
+      ],
+      "blocks": [],
+      "blocked_by": []
+    }
+  ]
+}

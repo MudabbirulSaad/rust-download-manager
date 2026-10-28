@@ -1,0 +1,14 @@
+ARG UBUNTU_VERSION=24.04
+FROM ubuntu:${UBUNTU_VERSION}
+ENV DEBIAN_FRONTEND=noninteractive
+COPY dist/rdm_0.2.2_amd64.deb /tmp/rdm.deb
+RUN apt-get update \
+    && if apt-cache show webkit2gtk-driver 2>/dev/null | grep -q '^Version:'; then task_driver=webkit2gtk-driver; else task_driver=webkitgtk-webdriver; fi \
+    && apt-get install -y --no-install-recommends /tmp/rdm.deb \
+    python3 xvfb xauth dbus-x11 "$task_driver" fonts-dejavu-core ca-certificates \
+    && rm -rf /var/lib/apt/lists/* /tmp/rdm.deb \
+    && mkdir /rdm-denied && chmod 0555 /rdm-denied
+RUN ! command -v cargo && ! command -v node && ! command -v gcc
+WORKDIR /workspace
+ENV RDM_DESKTOP=/usr/bin/rdm
+ENV RDM_TEST_BACKEND=/usr/lib/rdm/rdm-backend

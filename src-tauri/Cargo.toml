@@ -1,0 +1,24 @@
+[package]
+name = "rdm-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[[bin]]
+name = "rdm"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+rdm-protocol.workspace = true
+rdm-core.workspace = true
+tokio.workspace = true
+serde_json.workspace = true

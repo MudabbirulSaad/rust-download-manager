@@ -1,0 +1,296 @@
+{
+  "site": "https://rdm-mudabbirulsaad.atlassian.net",
+  "baseline": "RDM 0.2.2; Ubuntu 24.04 and 26.04 x86-64; GPL-3.0-only",
+  "source": "User-approved source audit and prioritized roadmap, 28 October 2026",
+  "epics": [
+    ["E1", "Reliable downloads and recovery", "P0", "Protect completed bytes and recover from expired links, lost context, network interruptions and storage failures."],
+    ["E2", "Browser integration and installation", "P0", "Provide persistent Brave and Firefox integration, version diagnostics, explicit permissions and predictable handoff rules."],
+    ["E3", "Video detection and media workflows", "P0", "Identify the intended video, offer real formats and metadata, and expand supported non-DRM media workflows."],
+    ["E4", "Download library, queues and organization", "P1", "Complete file management, queue editing, categories, bulk workflows, history and advanced scheduling."],
+    ["E5", "Ubuntu desktop experience", "P1", "Add background controls, notifications, desktop conveniences, accessible customization and automation entrypoints."],
+    ["E6", "Network policies and advanced transfers", "P1", "Add explicit authentication and proxies, live bandwidth control, usage policies and measured transfer improvements."],
+    ["E7", "Open-source delivery, quality and updates", "P1", "Publish the original source, establish release gates, deliver trusted updates and provide clear diagnostics and compatibility evidence."]
+  ],
+  "tickets": [
+    {
+      "code":"B01","epic":"E1","tier":"P0","type":"Story","title":"Refresh expired download addresses without discarding valid partial data",
+      "context":"Jobs store their current URL but have no refresh-address command or durable original-page identity. A renewed signed URL currently becomes a separate job.",
+      "scope":"Persist the original page and a refresh correlation identifier; add backend and desktop refresh actions; accept a fresh browser handoff into the existing job.",
+      "criteria":["A local fixture expires a URL halfway through a file; a fresh browser URL refreshes the existing job rather than adding a duplicate.","Resume retains bytes only when representation identity, size and validators establish the same file; changed content requires an explicit restart.","The completed hash matches the fixture and refresh correlation does not accept an unrelated file."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","crates/core/src/transfer.rs","extensions/src/shared.ts","src/App.tsx"],"depends":[]
+    },
+    {
+      "code":"B02","epic":"E1","tier":"P0","type":"Bug","title":"Restore public browser request context and guide reauthorization after backend restart",
+      "context":"Request contexts are held only in memory. Restarting the service loses Origin/Referer and user-agent context as well as deliberately ephemeral cookies.",
+      "scope":"Persist an allowlisted, non-secret public context and original-page metadata; keep cookies and credentials ephemeral; identify jobs requiring browser reauthorization.",
+      "criteria":["An Origin/Referer-protected HLS fixture resumes after service termination without manual header reconstruction.","No cookies, bearer tokens or credential-bearing page queries appear in persisted public context or diagnostic exports.","A signed-in job lacking credentials presents a browser refresh action and resumes the same job after an approved fresh handoff."],
+      "files":["crates/core/src/store.rs","crates/core/src/engine.rs","crates/protocol/src/lib.rs","media/worker.py"],"depends":["B01"]
+    },
+    {
+      "code":"B03","epic":"E3","tier":"P0","type":"Story","title":"Associate detected streams with the intended video and embedded frame",
+      "context":"Resource Timing and validated text playlists work, but recent advertising manifests or multiple frames can produce ambiguous candidates.",
+      "scope":"Associate candidates with their player/frame and navigation; prefer the selected main video; show a choice when ambiguous; request narrowly scoped capture permissions when required.",
+      "criteria":["Fixtures with a main player, an advertisement and multiple iframes enqueue the selected main video.","HLS, DASH, extensionless manifests, validated playlist.txt resources and SPA navigation are covered in Brave and Firefox tests.","CORS-denied or browser-bound sources produce an actionable unsupported state and do not enqueue a blob URL or unrelated HTML page."],
+      "files":["extensions/src/content.ts","extensions/src/media-source.ts","extensions/src/background.ts","tests/browser_chromium.mjs"],"depends":[]
+    },
+    {
+      "code":"B04","epic":"E1","tier":"P0","type":"Story","title":"Validate expected file content and completed media before reporting success",
+      "context":"The HTTP engine accepts successful response bodies without an expected-content check; the media worker currently relies on output filenames and provider completion.",
+      "scope":"Record expected content intent; detect HTML login/error pages for expected binary files; validate final media with FFprobe before final completion.",
+      "criteria":["A 200 response containing a login page cannot complete a job that expects a video or archive; deliberately requested HTML remains supported.","Truncated or invalid media is retained for recovery and never shown as Complete.","Valid HTTP fixtures retain exact hashes and valid media passes a container/stream probe."],
+      "files":["crates/core/src/transfer.rs","crates/core/src/media.rs","media/worker.py","tests/media_acceptance.py"],"depends":[]
+    },
+    {
+      "code":"B05","epic":"E1","tier":"P0","type":"Story","title":"Recover automatically when connectivity or the background service returns",
+      "context":"Request-level retries exist, but exhausted attempts become Needs attention and the desktop reconnects manually.",
+      "scope":"Add retryable failure categories, persistent retry budgets and waiting states; reconnect the desktop with backoff and obtain a fresh snapshot; handle offline and sleep/wake transitions.",
+      "criteria":["Disconnecting and restoring the fixture network resumes retryable downloads without duplicate bytes.","The GUI reconnects to a restarted service and replaces stale progress with a fresh snapshot.","Authentication and content-change errors wait for the appropriate user action; cancellation interrupts retry delays; Retry-After dates and seconds are tested."],
+      "files":["crates/core/src/transfer.rs","crates/core/src/engine.rs","src-tauri/src/main.rs","src/App.tsx"],"depends":["B02"]
+    },
+    {
+      "code":"B06","epic":"E1","tier":"P0","type":"Story","title":"Check destination space and manage abandoned partial downloads",
+      "context":"Write failures are surfaced, but there is no preflight space budget, merge-space estimate, partial cleanup view or destination recovery workflow.",
+      "scope":"Check writable destinations and available space when size is known; account for merge overhead; expose retained partials and explicit cleanup/recovery actions.",
+      "criteria":["Known oversized downloads are held before transfer and show the required versus available space.","A disk-full fixture retains durable progress and resumes after storage is recovered or an explicitly selected destination is prepared.","Cleanup identifies only RDM-owned partials, requires an explicit user action and leaves completed and unrelated files intact."],
+      "files":["crates/core/src/transfer.rs","crates/core/src/media.rs","crates/core/src/engine.rs","src/App.tsx","tests/io_failures.py"],"depends":[]
+    },
+    {
+      "code":"B07","epic":"E2","tier":"P0","type":"Story","title":"Provide persistent browser installation and component-version health checks",
+      "context":"Brave uses an unpacked developer extension and Firefox uses a temporary add-on. Protocol health does not expose the full app/host/provider/extension compatibility picture.",
+      "scope":"Prepare signed Firefox and normal Brave distribution; add setup and permission diagnostics plus explicit component version reporting and upgrade guidance.",
+      "criteria":["Both extensions survive browser restart through their supported permanent installation channels.","The setup screen identifies browser, extension, native host, backend and provider versions and detects mismatches.","Firefox Snap connects through its actual portal path and a denied permission results in a clear recovery action; no access is silently pre-granted."],
+      "files":["extensions/src/popup.ts","extensions/src/shared.ts","crates/backend/src/main.rs","scripts/build-extensions.mjs","README.md"],"depends":[]
+    },
+    {
+      "code":"B08","epic":"E4","tier":"P1","type":"Story","title":"Edit download properties and distinguish history removal from file deletion",
+      "context":"Existing jobs have no rename, move or description-edit commands. Remove clears history and can leave partials without a management view.",
+      "scope":"Add editable properties, source-page/link actions, collision-safe rename/move and distinct history-only and file-deletion actions.",
+      "criteria":["A paused or completed download can be renamed or moved without overwriting another file; failures preserve a usable original.","Descriptions and destinations survive restart and the Open file/Open folder actions follow the updated paths.","History removal keeps files; file deletion is an explicitly selected action with a clear list of affected files."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","src-tauri/src/main.rs","src/App.tsx"],"depends":["B06"]
+    },
+    {
+      "code":"B09","epic":"E4","tier":"P1","type":"Story","title":"Show download information with Download now and Download later actions",
+      "context":"Add URL currently submits a destination and queue immediately, without a metadata preview or per-job deferred-start option.",
+      "scope":"Probe metadata without accepting a transfer; preview filename, type, known/estimated size, destination and queue; allow explicit immediate or deferred start.",
+      "criteria":["Preview does not start a persistent transfer and unknown sizes are labelled honestly.","Download later creates one durable queued/held job without disabling unrelated queue members.","Edited filenames and destination choices are validated and preserved when Download now is selected."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","src/App.tsx"],"depends":["B04","B08"]
+    },
+    {
+      "code":"B10","epic":"E4","tier":"P1","type":"Story","title":"Reorder, prioritize and move downloads between queues fairly",
+      "context":"Queues can be created and scheduled, but jobs cannot be moved or explicitly reordered and earlier queues can consume all global slots.",
+      "scope":"Persist queue ordering and job priority; add queue reassignment/deletion and direct start/stop controls; define fair allocation under global and origin limits.",
+      "criteria":["Reordering and moving paused/queued jobs changes execution order and survives service restart.","Two continuously populated enabled queues both make progress while all global, queue and origin ceilings hold.","Deleting a nonempty queue requires an explicit reassignment policy and never deletes downloaded files."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","src/App.tsx"],"depends":[]
+    },
+    {
+      "code":"B11","epic":"E4","tier":"P1","type":"Story","title":"Route downloads to editable categories and destination folders",
+      "context":"Categories are fixed frontend filters derived from extensions; they do not assign folders or persist custom rules.",
+      "scope":"Create editable categories and ordered rules for filename, domain and file type; preview rule matches and allow per-job overrides.",
+      "criteria":["A new download is routed to the expected category and folder by tested rule precedence.","Users can add, edit and remove categories without changing or deleting existing downloaded files.","Rules and manual overrides persist and destination validation uses the storage safeguards."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","src/App.tsx"],"depends":["B08","B09"]
+    },
+    {
+      "code":"B12","epic":"E2","tier":"P1","type":"Story","title":"Configure browser capture rules and separate public capture from cookie consent",
+      "context":"Automatic capture is limited to approved sites and known GET requests; the UI has no granular include/exclude rules or approval-revocation management.",
+      "scope":"Add site/file-type capture rules, temporary bypass, explicit cookie approval management and a public-capture policy separate from credential consent.",
+      "criteria":["Include/exclude rules and a temporary bypass deterministically decide which GET downloads are handed off.","Public capture does not read cookies; revoking a site removes future cookie access and updates the visible permission state.","A failed native acknowledgement retains/resumes the browser download; POST, blob and unsupported browser-bound jobs remain in the browser."],
+      "files":["extensions/src/background.ts","extensions/src/shared.ts","extensions/src/popup.ts"],"depends":["B07"]
+    },
+    {
+      "code":"B13","epic":"E4","tier":"P1","type":"Story","title":"Collect page links and import bulk URL lists with a selection preview",
+      "context":"Multiline paste works, but there is no Download all links action, selected-text collection, file import/export or numbered URL generation.",
+      "scope":"Collect eligible page/selection links; filter and deduplicate in a preview; import/export URL lists and expand bounded numeric URL patterns.",
+      "criteria":["A fixture page with duplicate, relative and ineligible links produces only the selected HTTP/HTTPS jobs.","Import and numbered patterns show a bounded preview before durable acceptance and preserve per-item errors.","Repeated submission uses correlation keys and does not duplicate already accepted jobs."],
+      "files":["extensions/src/background.ts","extensions/src/content.ts","src/App.tsx","crates/protocol/src/lib.rs"],"depends":["B09","B12"]
+    },
+    {
+      "code":"B14","epic":"E3","tier":"P1","type":"Story","title":"List available video formats instead of offering only a height ceiling",
+      "context":"MediaOptions currently contains max_height only; the UI cannot enumerate the actual codec, container, frame rate or available combinations.",
+      "scope":"Add a media metadata/format discovery operation and a typed format selector with a predictable compatible fallback.",
+      "criteria":["The selector shows actual fixture formats, their resolution, codec, frame rate, container and known/estimated size.","Choosing a format downloads that format and verifies the resulting audio/video streams.","Unavailable or changed formats prompt a clear fallback choice without silently claiming the requested format was used."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/media.rs","media/worker.py","src/App.tsx","extensions/src/popup.ts"],"depends":["B03","B04"]
+    },
+    {
+      "code":"B15","epic":"E3","tier":"P1","type":"Story","title":"Preserve useful video titles and show duration and fragment progress",
+      "context":"Direct manifests often become playlist.mkv and total bytes may remain unknown, leaving progress and ETA unhelpful.",
+      "scope":"Carry source-page/title metadata; sanitize and resolve output names; report duration, fragment counts, processing stages and labelled estimates.",
+      "criteria":["A direct signed manifest retains a useful title/source-page association without losing its complete stream URL.","Unknown-length HLS shows meaningful fragment/time progress without a fabricated byte percentage.","Filename collisions, title updates and progress survive pause/recovery and completed files use their actual container extension."],
+      "files":["extensions/src/content.ts","crates/protocol/src/lib.rs","crates/core/src/media.rs","media/worker.py","src/App.tsx"],"depends":["B01","B14"]
+    },
+    {
+      "code":"B16","epic":"E6","tier":"P1","type":"Story","title":"Support scoped HTTP authentication and explicitly saved keyring credentials",
+      "context":"Cookie handoff exists, but manually added jobs do not support HTTP Basic, bearer tokens or an allowlisted custom-header workflow.",
+      "scope":"Add per-origin credential/header profiles and optional Ubuntu keyring persistence selected by the user; define redirect and downgrade boundaries.",
+      "criteria":["Basic and bearer fixtures complete only with the correct scoped credentials.","Unrelated-origin and downgrade redirects receive no credentials or sensitive custom headers.","Secrets are absent from SQLite, URLs, logs and exported diagnostics; saved credentials can be revoked from the UI."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/transfer.rs","media/worker.py","src/App.tsx"],"depends":["B02"]
+    },
+    {
+      "code":"B17","epic":"E6","tier":"P1","type":"Story","title":"Configure authenticated proxies and diagnose browser/backend route mismatches",
+      "context":"There is no explicit application proxy configuration or UI explaining when a browser VPN/proxy differs from the backend path.",
+      "scope":"Add HTTP/HTTPS and SOCKS configuration, authentication and bypass rules; show the effective configuration and a controlled connection test.",
+      "criteria":["HTTP and media jobs pass controlled HTTP/SOCKS proxy fixtures with authentication and exclusions.","Invalid or unreachable proxies generate actionable errors without leaking passwords.","The UI distinguishes system/environment settings from explicit application settings and explains browser-only VPN limitations."],
+      "files":["crates/core/src/transfer.rs","crates/core/src/media.rs","media/worker.py","crates/protocol/src/lib.rs","src/App.tsx"],"depends":["B16"]
+    },
+    {
+      "code":"B18","epic":"E6","tier":"P1","type":"Story","title":"Apply live bandwidth limits fairly across HTTP and video jobs",
+      "context":"HTTP limits are live, but media limits and global concurrency changes require pausing videos and use conservative fixed reservations.",
+      "scope":"Provide coordinated live limits for both engines, fair redistribution of unused capacity and per-site connection profiles.",
+      "criteria":["Changing global and per-job limits while mixed HTTP/HLS transfers run takes effect without restarting a job.","Measured aggregate bandwidth remains within the documented tolerance and active jobs receive fair service.","Origin-specific connection limits remain enforced as settings and active jobs change."],
+      "files":["crates/core/src/engine.rs","crates/core/src/transfer.rs","crates/core/src/media.rs","media/worker.py","src/App.tsx"],"depends":["B10"]
+    },
+    {
+      "code":"B19","epic":"E5","tier":"P1","type":"Story","title":"Add Ubuntu tray controls, actionable notifications and optional sleep inhibition",
+      "context":"Downloads continue after the GUI closes, but there is no tray, desktop completion/failure notification, single-instance reopen flow or active-transfer sleep policy.",
+      "scope":"Integrate Ubuntu tray actions and notification actions; reopen the existing app window; expose an opt-in active-download sleep inhibitor.",
+      "criteria":["Closing all windows leaves downloads running and tray actions reopen the app or pause transfers.","Completion/failure notifications open the correct file or recovery details and respect notification preferences.","The optional sleep inhibitor is held only during active work and is released on pause, completion and service exit."],
+      "files":["src-tauri/src/main.rs","src-tauri/tauri.conf.json","crates/backend/src/main.rs","src/App.tsx"],"depends":["B05"]
+    },
+    {
+      "code":"B20","epic":"E4","tier":"P1","type":"Story","title":"Scale history beyond 1000 jobs with filters, retention and tested backup restore",
+      "context":"History is one persisted JSON snapshot and adding a job is rejected at 1000 entries. Search currently matches filenames only.",
+      "scope":"Add schema migration and indexed/paginated history, date/site/type filters, retention choices and portable backup/export/restore.",
+      "criteria":["A library of at least 10000 generated jobs remains usable and accepts new jobs without the old hard stop.","Filters, sorting and pagination return stable results without blocking progress updates.","A backup restored into an isolated data directory preserves settings, queues and history while excluding ephemeral credentials."],
+      "files":["crates/core/src/store.rs","crates/core/src/engine.rs","crates/protocol/src/lib.rs","src/App.tsx"],"depends":["B08"]
+    },
+    {
+      "code":"B21","epic":"E1","tier":"P1","type":"Story","title":"Verify downloaded files against supplied SHA-256 values and checksum lists",
+      "context":"RDM calculates a completed digest for finalization but has no user-facing expected-checksum verification workflow.",
+      "scope":"Accept a SHA-256 value or supported checksum list, associate entries with jobs and show verified/mismatch/unspecified states.",
+      "criteria":["A correct expected digest produces a Verified result; a modified fixture produces a mismatch and never claims verification success.","Checksum-list filename matching handles ambiguity and collisions explicitly.","The expected digest and verification result persist through restart and are included in appropriate exports."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/transfer.rs","crates/core/src/media.rs","src/App.tsx"],"depends":["B04"]
+    },
+    {
+      "code":"B22","epic":"E7","tier":"P1","type":"Task","title":"Deliver signed application, extension and media-provider updates without disrupting jobs",
+      "context":"Releases are manually installed .deb files and provider changes require a rebuild. Active components can remain on older versions until restart/reload.",
+      "scope":"Define signed package/release distribution, component compatibility, coordinated update checks and a recoverable pause/update/reconnect flow.",
+      "criteria":["An installed Ubuntu baseline upgrades through the documented trusted channel and verifies repository/package signatures.","Active HTTP and media jobs are protected by a tested upgrade/recovery procedure with no duplicate or corrupted final files.","The UI reports component versions, release notes and required extension reloads; an invalid update is rejected and rollback is documented."],
+      "files":["scripts/package.sh","scripts/release.sh","packaging/rdm.service","crates/backend/src/main.rs","README.md"],"depends":["B07","B36","B37"]
+    },
+    {
+      "code":"B23","epic":"E7","tier":"P1","type":"Story","title":"Provide built-in connection diagnostics and a redacted support report",
+      "context":"Diagnostics currently require backend CLI status, journalctl and a generic popup connection test; errors are mainly unstructured strings.",
+      "scope":"Add structured error codes, retry/recovery explanations, browser/native/provider health tests and an explicit export action for redacted diagnostics.",
+      "criteria":["A user can identify missing hosts, stale versions, denied portal access, invalid proxies and provider failures from the app.","Each tested error points to a relevant recovery action and preserves its underlying cause for local troubleshooting.","A redaction fixture proves exported reports contain no cookies, credentials, query tokens or unnecessary browsing history."],
+      "files":["crates/protocol/src/lib.rs","crates/backend/src/main.rs","media/worker.py","src/App.tsx","extensions/src/popup.ts"],"depends":["B07"]
+    },
+    {
+      "code":"B24","epic":"E4","tier":"P2","type":"Story","title":"Schedule one-time and weekday queue windows with completion actions",
+      "context":"Schedules currently repeat daily and require both start and stop times.",
+      "scope":"Add one-time/weekday schedules, independent start/stop settings, explicit time-zone semantics and opt-in completion actions.",
+      "criteria":["One-time, weekday, overnight and daylight-saving fixtures run only in their intended windows.","Manual stopping does not trigger completion actions and no power action is enabled by default.","Schedules survive restart and the UI shows the next eligible run and missed-window policy."],
+      "files":["crates/protocol/src/lib.rs","crates/core/src/engine.rs","src/App.tsx"],"depends":["B10"]
+    },
+    {
+      "code":"B25","epic":"E6","tier":"P2","type":"Story","title":"Apply data quotas, metered-network rules and battery-aware download policies",
+      "context":"Speed limits exist, but there are no usage quotas or network/power policy controls.",
+      "scope":"Track quota windows and configure metered/battery rules with explicit overrides and scheduled speed profiles.",
+      "criteria":["A controlled quota pauses transfers at the configured budget and resumes at the next window without resetting downloaded data.","Simulated metered and battery transitions apply the selected policy and expose the reason in the UI.","Accounting and overrides survive restart and apply consistently to HTTP and media transfers."],
+      "files":["crates/core/src/engine.rs","crates/core/src/store.rs","crates/core/src/transfer.rs","crates/core/src/media.rs","src/App.tsx"],"depends":["B18","B24"]
+    },
+    {
+      "code":"B26","epic":"E3","tier":"P2","type":"Story","title":"Add audio-only, subtitles, chapters and previewed playlist selection",
+      "context":"The media worker intentionally downloads a single video and has no audio-only, subtitle, chapter or playlist-selection interface.",
+      "scope":"Extend media options and metadata with previewed playlist item selection, audio/subtitle choices and output naming templates.",
+      "criteria":["A playlist preview creates only explicitly selected items with stable ordering and deduplication.","Audio-only and subtitle fixtures produce the selected outputs with clear container/conversion choices.","Items retain independent queue, retry and recovery state and unavailable items do not discard successful siblings."],
+      "files":["crates/protocol/src/lib.rs","media/worker.py","crates/core/src/media.rs","src/App.tsx","extensions/src/popup.ts"],"depends":["B14","B15","B10"]
+    },
+    {
+      "code":"B27","epic":"E6","tier":"P2","type":"Task","title":"Benchmark adaptive chunk sizing and connection tuning",
+      "context":"The HTTP engine schedules a fixed 4 MiB chunk pool with configured worker counts; there is no measured adaptive tuning.",
+      "scope":"Build reproducible latency/throughput fixtures and implement bounded adaptation only where it improves measured performance.",
+      "criteria":["Benchmarks compare baseline and candidate behaviour under high latency, slow origins and rate limiting.","Every candidate preserves exact hashes, range validation, durable recovery and origin ceilings.","Published results include cases with no speedup and prevent unsupported universal acceleration claims."],
+      "files":["crates/core/src/transfer.rs","tests/acceptance.py","VERIFICATION.md"],"depends":["B18","B38"]
+    },
+    {
+      "code":"B28","epic":"E5","tier":"P2","type":"Story","title":"Add opt-in clipboard monitoring and desktop link drag-and-drop",
+      "context":"Users can paste links manually, but there is no clipboard discovery, link drop target or dragging completed files out of the app.",
+      "scope":"Add user-enabled URL clipboard prompts, validated link drops and completed-file drag actions using supported Ubuntu/Tauri APIs.",
+      "criteria":["Clipboard monitoring is disabled by default and can be disabled without retaining unrelated clipboard content.","Dropping eligible links opens a download preview and dropping unsupported data causes no transfer.","Dragging a completed file provides its real path and works in supported Ubuntu file managers."],
+      "files":["src-tauri/src/main.rs","src/App.tsx","README.md"],"depends":["B09","B19"]
+    },
+    {
+      "code":"B29","epic":"E6","tier":"P2","type":"Story","title":"Add FTP and FTPS transfers through the common download lifecycle",
+      "context":"Ordinary transfers currently support HTTP/HTTPS GET only; FTP was explicitly deferred.",
+      "scope":"Implement FTP/FTPS as separate transport adapters sharing queues, destination safeguards, progress and recoverable state; evaluate SFTP in a separate follow-up.",
+      "criteria":["Controlled FTP and certificate-validated FTPS fixtures transfer exact bytes and recover supported interrupted transfers.","Authentication uses scoped credential handling and rejects unsupported insecure configuration rather than silently changing protocols.","Existing HTTP and media acceptance tests remain unchanged and pass."],
+      "files":["crates/core/src/lib.rs","crates/core/src/engine.rs","crates/protocol/src/lib.rs","README.md"],"depends":["B16","B17","B38"]
+    },
+    {
+      "code":"B30","epic":"E4","tier":"P2","type":"Story","title":"Build a bounded website grabber with filtered offline downloads",
+      "context":"Page-link collection and recursive website capture are outside the current release.",
+      "scope":"Create previewable crawl projects with scope/depth/file filters, link rewriting and optional conditional synchronization.",
+      "criteria":["A controlled multi-page site produces the selected offline subset with working rewritten local links.","Crawl limits, cancellation, duplicate detection and origin rules bound the requested work.","Synchronization uses representation validators and preserves existing files unless the user has explicitly selected replacement behaviour."],
+      "files":["crates/core/src/engine.rs","crates/core/src/transfer.rs","crates/protocol/src/lib.rs","src/App.tsx"],"depends":["B13","B24","B20"]
+    },
+    {
+      "code":"B31","epic":"E4","tier":"P2","type":"Story","title":"Preview supported ZIP archive contents before full download",
+      "context":"RDM has no archive directory preview.",
+      "scope":"Read bounded ZIP directory metadata through validated ranges, display entries and handle unsupported/encrypted layouts explicitly.",
+      "criteria":["A supported ZIP fixture lists filenames and sizes without transferring the complete archive.","Invalid ranges, oversized metadata and malformed archives produce bounded failures.","Preview never extracts or executes archive entries and the eventual whole-file download still passes checksum verification."],
+      "files":["crates/core/src/transfer.rs","crates/protocol/src/lib.rs","src/App.tsx"],"depends":["B09","B21"]
+    },
+    {
+      "code":"B32","epic":"E5","tier":"P2","type":"Story","title":"Run explicitly configured completion scans and post-download actions",
+      "context":"There is no optional antivirus scan or configured completion-action integration.",
+      "scope":"Add opt-in scanner integration and explicit action profiles with visible results; keep downloaded files from being automatically executed by default.",
+      "criteria":["Controlled success, detection and scanner-unavailable fixtures show distinct scan outcomes.","A failed scan or action does not misreport transfer integrity or remove the file without a selected policy.","Paths are passed as arguments without shell interpolation and no completion action runs unless configured by the user."],
+      "files":["src-tauri/src/main.rs","crates/core/src/engine.rs","crates/protocol/src/lib.rs","src/App.tsx"],"depends":["B04","B19","B21"]
+    },
+    {
+      "code":"B33","epic":"E5","tier":"P2","type":"Story","title":"Customize table layouts and keyboard shortcuts with localization support",
+      "context":"Themes and basic keyboard navigation exist, but columns/layouts are fixed and the interface is English-only.",
+      "scope":"Add saved column layouts, documented shortcuts, translatable strings and accessibility checks across core workflows.",
+      "criteria":["Column visibility/order and supported layout choices persist across app restarts.","Add, search, select, pause and recovery workflows are keyboard-operable with visible focus and labelled controls.","A second locale and expanded-text fixture render correctly in light/dark modes without hiding important actions."],
+      "files":["src/App.tsx","src/style.css","extensions/src/popup.html","extensions/src/content.ts","tests/App.test.tsx"],"depends":["B08","B10","B19"]
+    },
+    {
+      "code":"B34","epic":"E5","tier":"P2","type":"Story","title":"Expose a friendly rdm command-line interface for desktop automation",
+      "context":"The backend accepts diagnostic commands and raw JSON, but there is no ergonomic public CLI.",
+      "scope":"Provide add/list/pause/resume/queue commands with machine-readable output, documented exit codes and the existing private service protocol.",
+      "criteria":["A shell can enqueue and control downloads without constructing protocol JSON manually.","Human and JSON output handle errors predictably and avoid exposing credentials by default.","CLI changes affect the same jobs seen in the desktop and preserve native-host restrictions on administrative browser commands."],
+      "files":["crates/backend/src/main.rs","crates/core/src/client.rs","crates/protocol/src/lib.rs","README.md"],"depends":["B10","B23"]
+    },
+    {
+      "code":"B35","epic":"E2","tier":"P2","type":"Story","title":"Test and document additional Chromium browsers and browser profiles",
+      "context":"Brave and Firefox Snap are the selected supported browsers. Some host registration paths exist for Chrome/Chromium but their complete workflows are not established.",
+      "scope":"Add supported installation/registration discovery and an explicit compatibility matrix for Chrome, Chromium, Edge and multiple profiles where available.",
+      "criteria":["Every browser marked Supported passes native connection, public handoff, approved authentication and failed-handoff retention tests.","Per-profile setup and extension identities remain consistent without editing protected browser preferences.","Unsupported sandbox/portal cases are labelled with tested limitations rather than assumed compatible."],
+      "files":["crates/backend/src/main.rs","scripts/build-extensions.mjs","tests/browser_chromium.mjs","README.md"],"depends":["B07","B12","B39"]
+    },
+    {
+      "code":"B36","epic":"E7","tier":"P1","type":"Task","title":"Initialize and publish the GPL-3.0-only source repository with contribution guidance",
+      "context":"The workspace includes source archives and license notices but is not currently an initialized Git repository.",
+      "scope":"Establish version control, release tags, contribution/build guidance, issue templates and repository publication under the user's chosen hosting account.",
+      "criteria":["The published source builds the documented Ubuntu package from pinned toolchains and committed lockfiles.","The proprietary Windows installer, caches, generated outputs and credentials are excluded from repository history.","GPL license text, dependency notices, contribution instructions and release provenance are present; any required hosting authorization is resolved before publication."],
+      "files":[".gitignore","LICENSE","README.md","THIRD_PARTY_NOTICES.md","scripts/release.sh"],"depends":[]
+    },
+    {
+      "code":"B37","epic":"E7","tier":"P1","type":"Task","title":"Extend CI to Ubuntu 24.04 and 26.04 packages and browser regressions",
+      "context":"An Ubuntu 24.04 GitHub Actions workflow exists; both runtime releases have been checked locally but are not represented as complete automated release gates.",
+      "scope":"Add runtime matrices, controlled Brave/Firefox content/handoff checks, media fixtures, packaging upgrades and retained test evidence.",
+      "criteria":["CI builds on the Ubuntu 24.04 baseline and tests installed packages on 24.04 and 26.04.","HTTP integrity/recovery, disguised HLS, Origin context and browser handoff regressions gate releases.","Browser permission prompts are tested through their supported paths without fake grants; logs, hashes and failure artifacts are retained."],
+      "files":[".github/workflows/check.yml","packaging/Dockerfile.runtime","tests/browser_chromium.mjs","tests/browser_firefox_snap.py","scripts/release.sh"],"depends":["B36"]
+    },
+    {
+      "code":"B38","epic":"E7","tier":"P0","type":"Task","title":"Gate 1.0 with extended recovery, large-library and installed-package acceptance tests",
+      "context":"Existing controlled integrity, recovery, browser and desktop checks provide a baseline, but the newly prioritized workflows need explicit release evidence.",
+      "scope":"Add acceptance coverage for refreshed addresses, browser-context loss, sleep/wake, ambiguous players, large histories and clean installation/upgrade/uninstallation.",
+      "criteria":["A large fixture pauses, survives forced service termination, refreshes an expired address and completes with the original SHA-256.","Installed-app tests on clean Ubuntu 24.04/26.04 environments establish window-close background operation and Brave/Firefox handoff.","Failures retain evidence and block the release; live-site smoke tests are distinguished from deterministic fixtures and no unrun check is marked Passed."],
+      "files":["tests/acceptance.py","tests/media_acceptance.py","tests/desktop_webdriver.py","tests/io_failures.py","VERIFICATION.md"],"depends":["B01","B02","B03","B04","B05","B06","B07","B20","B37"]
+    },
+    {
+      "code":"B39","epic":"E7","tier":"P1","type":"Task","title":"Publish the supported-site matrix and repeatable provider compatibility checks",
+      "context":"The provider supports selected workflows and current upstream extractors; a visible video button is not evidence of universal site support.",
+      "scope":"Document supported, experimental and unsupported workflows; record browser/provider versions and reproducible compatibility checks without retaining user browsing data.",
+      "criteria":["The matrix separates direct HTTP, HLS/DASH, YouTube, authenticated GET and browser-bound/DRM limitations.","Each Supported claim has a dated test method and tested component versions.","Provider updates run a bounded approved smoke set plus local regressions and publish known failures honestly."],
+      "files":["README.md","VERIFICATION.md","packaging/media-tools.json","tests/youtube_live.py","tests/media_acceptance.py"],"depends":["B03","B07","B23"]
+    },
+    {
+      "code":"B40","epic":"E7","tier":"P0","type":"Task","title":"Define RDM 1.0 scope, board workflow and evidence-based Definition of Done",
+      "context":"The roadmap is approved for backlog creation. Priorities must remain distinct from implementation status and existing 0.2.2 capabilities must not be recreated as missing features.",
+      "scope":"Use P0 for reliability blockers, P1 for essential completion and P2 for later expansion. Track To Do, In Progress, In Review and Done; record blockers and keep work unassigned until an owner accepts it.",
+      "criteria":["Every approved roadmap item has an epic, a priority label, implementation context and testable acceptance criteria.","Done requires implemented Rust/frontend integration as applicable, relevant passing tests, installed Ubuntu validation for affected workflows, user documentation and linked evidence.","The 1.0 scope remains Ubuntu 24.04/26.04 x86-64, GPL-3.0-only and HTTP/HTTPS plus supported non-DRM media; optional FTP/site-grabber expansions do not block the essential release."],
+      "files":["README.md","VERIFICATION.md","planning/jira-backlog.json"],"depends":[]
+    }
+  ]
+}

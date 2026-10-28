@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Rust Download Manager
+Comment=Manage and accelerate your downloads
+Exec=rdm
+Icon=rdm
+Terminal=false
+Categories=Network;FileTransfer;
+StartupWMClass=rdm
