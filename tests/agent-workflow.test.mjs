@@ -11,6 +11,31 @@ const project = loadProject();
 const clone = value => structuredClone(value);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
+test('pinned tool fetches stop at the transfer deadline despite continuing response bytes', () => {
+  execFileSync('python3', ['-c', `
+import importlib.util, subprocess, threading, time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+spec=importlib.util.spec_from_file_location('fetcher', 'scripts/fetch-media-tools.py')
+fetcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(fetcher)
+class Handler(BaseHTTPRequestHandler):
+ def log_message(self, *args): pass
+ def do_GET(self):
+  self.send_response(200);self.send_header('Content-Length','100');self.end_headers()
+  try:
+   for _ in range(100): self.wfile.write(b'x');self.wfile.flush();time.sleep(.03)
+  except (BrokenPipeError, ConnectionResetError): pass
+server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+threading.Thread(target=server.serve_forever,daemon=True).start()
+start=time.monotonic()
+try:
+ try: fetcher.fetch_bytes(f'http://127.0.0.1:{server.server_port}/drip',timeout=.2,retries=0)
+ except subprocess.CalledProcessError as e: assert e.returncode==28, e
+ else: raise AssertionError('A continuing slow response exceeded its transfer deadline')
+ assert time.monotonic()-start < 2
+finally: server.shutdown();server.server_close()
+`], {cwd: new URL('..', import.meta.url), timeout: 5000, stdio: 'pipe'});
+});
+
 test('build-specific license notices preserve clean source across different Cargo caches', () => {
   const work = mkdtempSync(join(tmpdir(), 'rdm-notices-'));
   try {
