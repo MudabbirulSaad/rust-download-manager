@@ -15,7 +15,8 @@ for task_ubuntu in 24.04 26.04; do
   if ((EUID == 0)); then chown "$task_runtime_uid:$task_runtime_gid" "$task_screenshots"; fi
   task_image="rdm-agent-runtime:$task_ubuntu-${task_sha:0:12}"
   docker build -t "$task_image" -f packaging/Dockerfile.runtime \
-    --build-arg "UBUNTU_VERSION=$task_ubuntu" --build-arg "RDM_VERSION=$task_version" .
+    --build-arg "UBUNTU_VERSION=$task_ubuntu" --build-arg "RDM_VERSION=$task_version" \
+    --build-arg "RDM_TEST_UID=$task_runtime_uid" --build-arg "RDM_TEST_GID=$task_runtime_gid" .
   docker run --rm --user "$task_runtime_uid:$task_runtime_gid" \
     --tmpfs /rdm-tiny:rw,size=1m,mode=0777 \
     -v "$PWD:/workspace:ro" -v "$task_screenshots:/artifacts" \
