@@ -46,6 +46,16 @@ pub struct MediaOptions {
     pub max_height: u32,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ExpectedContent {
+    #[default]
+    Auto,
+    Binary,
+    Html,
+    Media,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct AddSpec {
     pub url: String,
@@ -61,6 +71,9 @@ pub struct AddSpec {
     pub context: Option<RequestContext>,
     #[serde(default)]
     pub media: Option<MediaOptions>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub expected_content: Option<ExpectedContent>,
 }
 fn main_queue() -> String {
     "main".into()
@@ -92,6 +105,12 @@ pub struct Download {
     pub media: Option<MediaOptions>,
     #[serde(default)]
     pub media_stage: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub expected_content: Option<ExpectedContent>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub response_content_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -199,6 +218,7 @@ pub fn typescript() -> String {
         ScopedCookie::decl(),
         RequestContext::decl(),
         MediaOptions::decl(),
+        ExpectedContent::decl(),
         AddSpec::decl(),
         Download::decl(),
         Queue::decl(),

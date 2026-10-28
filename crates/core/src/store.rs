@@ -43,6 +43,9 @@ impl Store {
                 Err(e) => return Err(e.into()),
             };
         for job in &mut state.downloads {
+            if job.expected_content.is_none() {
+                job.expected_content = Some(crate::content::expected(job));
+            }
             job.active_connections = 0;
             job.speed = 0;
             if job.media.is_none() {

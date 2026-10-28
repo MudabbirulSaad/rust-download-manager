@@ -263,6 +263,15 @@ async fn finish(
 ) -> Result<()> {
     let target = Path::new(&job.destination).join(&job.filename);
     let candidate = if part.exists() { part } else { &target };
+    engine
+        .update(id, true, |j| {
+            j.media_stage = Some("verifying".into());
+            j.speed = 0;
+            j.active_connections = 0;
+        })
+        .await?;
+    crate::content::verify_file(candidate, rdm_protocol::ExpectedContent::Media, None, token)
+        .await?;
     let digest = transfer::hash_file(candidate, token).await?;
     if let Some(expected) = &job.sha256 {
         ensure!(

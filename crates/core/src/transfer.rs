@@ -328,11 +328,32 @@ pub async fn run(engine: Arc<Engine>, id: &str, token: CancellationToken) -> Res
     if let Some(expected) = &job.sha256 {
         let target = Path::new(&job.destination).join(&job.filename);
         let candidate = if path.exists() { &path } else { &target };
+        crate::content::verify_file(
+            candidate,
+            crate::content::expected(&job),
+            job.response_content_type.as_deref(),
+            &token,
+        )
+        .await?;
         ensure!(
             hash_file(candidate, &token).await? == *expected,
             "Completed file bytes changed before finalization. Choose Restart."
         );
         return finalize(&engine, id, &path, expected.clone(), &token).await;
+    }
+    // Fully synced bodies can await verification without a digest yet. Retrying
+    // that local step needs neither range support nor any new response bytes.
+    if job
+        .total
+        .is_some_and(|total| complete_ranges(&job.completed_ranges, total))
+    {
+        let metadata =
+            std::fs::symlink_metadata(&path).context("Partial file is missing. Choose Restart.")?;
+        ensure!(
+            metadata.file_type().is_file() && Some(metadata.len() as usize) == job.total,
+            "Partial file was replaced. Choose Restart."
+        );
+        return verify_and_finalize(&engine, id, &path, &job, &token).await;
     }
     let client = client()?;
     let probe = fetch_retry(
@@ -377,6 +398,19 @@ pub async fn run(engine: Arc<Engine>, id: &str, token: CancellationToken) -> Res
     let current_validator = validator(&probe.response);
     let resumable = range_total.is_some() && current_validator.is_some();
     let final_url = probe.response.url().to_string();
+    let content_type = probe
+        .response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|value| {
+            value
+                .split(';')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_ascii_lowercase()
+        });
     if !job.completed_ranges.is_empty() {
         ensure!(
             path.is_file(),
@@ -426,6 +460,13 @@ pub async fn run(engine: Arc<Engine>, id: &str, token: CancellationToken) -> Res
         }
         job.filename = filename;
     }
+    let expected_content = crate::content::observed(
+        crate::content::expected(&job),
+        &job.filename,
+        content_type.as_deref(),
+    );
+    job.expected_content = Some(expected_content);
+    job.response_content_type = content_type.clone();
     engine
         .update(id, true, |j| {
             j.total = total;
@@ -434,6 +475,8 @@ pub async fn run(engine: Arc<Engine>, id: &str, token: CancellationToken) -> Res
             j.final_url = Some(final_url);
             j.status = Status::Running;
             j.error = None;
+            j.expected_content = Some(expected_content);
+            j.response_content_type = content_type.clone();
             j.downloaded = j.completed_ranges.iter().map(|r| r.end - r.start).sum();
         })
         .await?;
@@ -521,11 +564,51 @@ pub async fn run(engine: Arc<Engine>, id: &str, token: CancellationToken) -> Res
             .await?;
     }
     ensure!(!token.is_cancelled(), "Paused");
-    let digest = hash_file(&path, &token).await?;
+    verify_and_finalize(&engine, id, &path, &job, &token).await
+}
+
+fn complete_ranges(ranges: &[ByteRange], total: usize) -> bool {
+    if total == 0 {
+        return ranges.len() == 1 && ranges[0].start == 0 && ranges[0].end == 0;
+    }
+    let mut ranges: Vec<_> = ranges
+        .iter()
+        .map(|range| (range.start, range.end))
+        .collect();
+    ranges.sort_unstable();
+    let mut position = 0;
+    for (start, end) in ranges {
+        if start != position || end <= start || end > total {
+            return false;
+        }
+        position = end;
+    }
+    position == total
+}
+
+async fn verify_and_finalize(
+    engine: &Arc<Engine>,
+    id: &str,
+    path: &Path,
+    job: &Download,
+    token: &CancellationToken,
+) -> Result<()> {
+    let intent = crate::content::expected(job);
+    if intent == ExpectedContent::Media {
+        engine
+            .update(id, true, |j| {
+                j.media_stage = Some("verifying".into());
+                j.speed = 0;
+                j.active_connections = 0;
+            })
+            .await?;
+    }
+    crate::content::verify_file(path, intent, job.response_content_type.as_deref(), token).await?;
+    let digest = hash_file(path, token).await?;
     engine
         .update(id, true, |j| j.sha256 = Some(digest.clone()))
         .await?;
-    finalize(&engine, id, &path, digest, &token).await
+    finalize(engine, id, path, digest, token).await
 }
 pub(crate) async fn hash_file(path: &Path, token: &CancellationToken) -> Result<String> {
     let mut file = OpenOptions::new()
@@ -650,4 +733,37 @@ pub(crate) fn rename_noreplace(from: &Path, to: &Path) -> Result<()> {
         return Err(std::io::Error::last_os_error().into());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod checkpoint_tests {
+    use super::*;
+    #[test]
+    fn verification_requires_every_byte_to_be_checkpointed_even_if_the_file_is_preallocated() {
+        assert!(!complete_ranges(&[], 10));
+        assert!(!complete_ranges(&[ByteRange { start: 0, end: 5 }], 10));
+        assert!(!complete_ranges(
+            &[
+                ByteRange { start: 0, end: 4 },
+                ByteRange { start: 5, end: 10 }
+            ],
+            10
+        ));
+        assert!(!complete_ranges(
+            &[
+                ByteRange { start: 0, end: 6 },
+                ByteRange { start: 5, end: 10 }
+            ],
+            10
+        ));
+        assert!(complete_ranges(
+            &[
+                ByteRange { start: 5, end: 10 },
+                ByteRange { start: 0, end: 5 }
+            ],
+            10
+        ));
+        assert!(!complete_ranges(&[], 0));
+        assert!(complete_ranges(&[ByteRange { start: 0, end: 0 }], 0));
+    }
 }

@@ -72,7 +72,7 @@ impl Engine {
         match command {
             Command::Health => {
                 return Ok(
-                    serde_json::json!({"version": VERSION, "name": "rdm", "capabilities": ["media-v1"]}),
+                    serde_json::json!({"version": VERSION, "name": "rdm", "capabilities": ["media-v1", "content-validation-v1"]}),
                 );
             }
             Command::Snapshot | Command::Subscribe => {
@@ -88,6 +88,10 @@ impl Engine {
         let result = match command {
             Command::Add { mut spec } => {
                 if let Some(media) = &spec.media {
+                    ensure!(
+                        spec.expected_content != Some(ExpectedContent::Html),
+                        "A media job cannot request HTML content"
+                    );
                     ensure!(
                         [0, 360, 480, 720, 1080, 1440, 2160].contains(&media.max_height),
                         "Choose an available video quality"
@@ -172,6 +176,13 @@ impl Engine {
                     &safe_filename(&guessed),
                     &inner.snapshot.downloads,
                 );
+                let expected_content = if spec.media.is_some() {
+                    ExpectedContent::Media
+                } else {
+                    spec.expected_content
+                        .filter(|c| *c != ExpectedContent::Auto)
+                        .unwrap_or_else(|| crate::content::infer_filename(&guessed))
+                };
                 let id = uuid::Uuid::new_v4().to_string();
                 let authenticated = spec.context.as_ref().is_some_and(|c| !c.cookies.is_empty());
                 if let Some(ctx) = spec.context {
@@ -202,6 +213,8 @@ impl Engine {
                         sha256: None,
                         media: spec.media,
                         media_stage: None,
+                        expected_content: Some(expected_content),
+                        response_content_type: None,
                     },
                 );
                 serde_json::json!({"id": id})
@@ -244,6 +257,7 @@ impl Engine {
                                 job.downloaded = 0;
                                 job.validator = None;
                                 job.sha256 = None;
+                                job.response_content_type = None;
                                 let part = part_path(job);
                                 if part.exists() {
                                     std::fs::remove_file(part)?;
