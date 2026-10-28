@@ -1,0 +1,32 @@
+name: Bug report
+description: Report an RDM failure with steps we can reproduce.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Link an existing RDM Jira key when available. Keep cookies, credentials and private URL query tokens out of public reports."
+  - type: input
+    id: environment
+    attributes:
+      label: Version and environment
+      description: RDM version or commit, Ubuntu version, and browser/version if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include a public fixture or sanitized example when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Error and evidence
+      description: Relevant redacted logs, screenshots, test results, or a linked Jira ticket.

@@ -1,10 +1,28 @@
 name: Ubuntu build
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rdm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   ubuntu:
+    name: agent-and-package-checks
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: 2
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Evidence must name the reviewed PR head, not GitHub's temporary merge ref.
+          # Strict branch protection separately requires an up-to-date base.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -13,19 +31,22 @@ jobs:
         with:
           toolchain: 1.99.1
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf webkit2gtk-driver xvfb xauth dbus-x11
-      - run: sudo apt-get install -y ffmpeg && npm run release
-      - run: cargo install tauri-driver --version 2.1.0 --locked --root .cache/driver
-      - run: dbus-run-session -- xvfb-run -a python3 tests/desktop_webdriver.py
-        env:
-          RDM_DESKTOP: ${{ github.workspace }}/target/release/rdm
-          RDM_TEST_BACKEND: ${{ github.workspace }}/target/release/rdm-backend
+      - name: Prepare pinned Ubuntu build and test environment
+        run: bash scripts/agent-setup.sh --system --drivers
+      - name: Verify source, desktop and installed Ubuntu 24.04 / 26.04 packages
+        run: npm run agent:check -- --profiles common,http,media,desktop,package --environment ci --allow-external --base origin/main
+        # Local browser/portal checks remain explicit external evidence requirements.
+        # This option does not turn them into passing results in the evidence report.
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: rdm-ubuntu-amd64
+          include-hidden-files: true
           path: |
             dist/*.deb
             dist/*.zip
             dist/SHA256SUMS
             dist/*source.tar.gz
-            dist/screenshots/*.png
+            .agent-runs/**/checks.json
+            .agent-runs/**/*.log
+            .agent-runs/**/*.png

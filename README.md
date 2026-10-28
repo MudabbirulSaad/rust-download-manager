@@ -2,6 +2,17 @@
 
 A local, GPL-3.0-only download manager for Ubuntu, with a Rust background service and a Tauri 2 / React desktop app. This is an original implementation; the proprietary installer in `build/` is a reference input and is never packaged.
 
+## Work with coding agents
+
+The public source is [MudabbirulSaad/rust-download-manager](https://github.com/MudabbirulSaad/rust-download-manager).
+Locally, ask: **Use $rdm-implement-ticket to implement RDM-15.** In a fresh prepared
+Codex Cloud task, ask: **Use $rdm-review-ticket to review RDM-15, fix in-scope issues,
+run required checks, then merge and close only if every gate passes.**
+See [the agent workflow](docs/agent-workflow.md) for setup, ticket readiness, exact
+revision evidence and recovery after interrupted handoffs. `AGENTS.md` and the two
+repository skills carry the same guidance into local and cloud work.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and provenance rules.
+
 ## Install the Ubuntu build
 
 Download/build `dist/rdm_0.2.2_amd64.deb`, then:
@@ -83,6 +94,11 @@ Compiled frontend assets are isolated in `web-dist/`; release packages and notic
 The development frontend listens only on `127.0.0.1:1420`. Its browser preview is visibly disconnected; transfers require the desktop app.
 
 Create the complete release on Ubuntu 24.04:
+
+Release packaging requires a clean Git checkout with the source changes committed.
+Its source archive is generated from that exact commit; arbitrary workspace files
+and generated outputs are excluded. A source archive can build the app, but create
+a Git checkout before producing distribution packages from it.
 
 ```bash
 npm run release

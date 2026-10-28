@@ -1,7 +1,8 @@
 ARG UBUNTU_VERSION=24.04
 FROM ubuntu:${UBUNTU_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
-COPY dist/rdm_0.2.2_amd64.deb /tmp/rdm.deb
+ARG RDM_VERSION=0.2.2
+COPY dist/rdm_${RDM_VERSION}_amd64.deb /tmp/rdm.deb
 RUN apt-get update \
     && if apt-cache show webkit2gtk-driver 2>/dev/null | grep -q '^Version:'; then task_driver=webkit2gtk-driver; else task_driver=webkitgtk-webdriver; fi \
     && apt-get install -y --no-install-recommends /tmp/rdm.deb \
@@ -9,6 +10,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/rdm.deb \
     && mkdir /rdm-denied && chmod 0555 /rdm-denied
 RUN ! command -v cargo && ! command -v node && ! command -v gcc
+ARG RDM_TEST_UID=1000
+ARG RDM_TEST_GID=1000
+# D-Bus requires a passwd entry even when Docker accepts a numeric --user.
+RUN if ! getent group "$RDM_TEST_GID" >/dev/null; then groupadd --gid "$RDM_TEST_GID" rdm-test; fi \
+    && if ! getent passwd "$RDM_TEST_UID" >/dev/null; then useradd --uid "$RDM_TEST_UID" --gid "$RDM_TEST_GID" --no-create-home --home-dir /tmp/rdm-home rdm-test; fi
 WORKDIR /workspace
 ENV RDM_DESKTOP=/usr/bin/rdm
 ENV RDM_TEST_BACKEND=/usr/lib/rdm/rdm-backend

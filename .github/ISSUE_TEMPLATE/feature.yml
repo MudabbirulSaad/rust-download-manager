@@ -1,0 +1,32 @@
+name: Feature proposal
+description: Describe a user outcome or refine an existing Jira requirement.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Jira remains authoritative for approved requirements and status. Link any related RDM ticket; a proposal does not automatically create or approve implementation work."
+  - type: input
+    id: jira
+    attributes:
+      label: Related Jira ticket
+      placeholder: RDM-15
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome and current limitation
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scope and boundaries
+      description: Included behavior, exclusions, supported Ubuntu/browser environments and prerequisites.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Observable acceptance criteria
+      description: Describe how a user or controlled fixture can verify success.
+    validations:
+      required: true

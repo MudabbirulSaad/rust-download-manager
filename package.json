@@ -15,6 +15,13 @@
     "test": "vitest run",
     "extensions": "node scripts/build-extensions.mjs",
     "types": "node scripts/export-types.mjs",
+    "types:check": "node scripts/export-types.mjs --check",
+    "agent:validate": "node scripts/agent-workflow.mjs validate",
+    "agent:ticket": "node scripts/agent-workflow.mjs ticket",
+    "agent:doctor": "node scripts/agent-workflow.mjs doctor",
+    "agent:check": "node scripts/agent-workflow.mjs check",
+    "agent:handoff": "node scripts/agent-workflow.mjs handoff",
+    "agent:test": "node --test tests/agent-workflow.test.mjs",
     "release": "bash scripts/release.sh"
   },
   "dependencies": {

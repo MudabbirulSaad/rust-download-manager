@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import json,tomllib,shutil
+import json,tomllib,shutil,os
 root=Path(__file__).resolve().parent.parent
 out=root/'dist/licenses';out.mkdir(parents=True,exist_ok=True)
 lines=['# Third-party notices','','RDM is GPL-3.0-only. Dependencies retain their own licenses. Bundled license texts are in `licenses/` in the installed documentation.','','## Rust dependencies','']
 lock=tomllib.loads((root/'Cargo.lock').read_text())
-registry=Path.home()/'.cargo/registry/src'
+registry=Path(os.environ.get('CARGO_HOME', Path.home()/'.cargo'))/'registry/src'
 for item in lock['package']:
  if 'source' not in item:continue
  name,version=item['name'],item['version']
@@ -32,5 +32,5 @@ lines += ['', '## Media tools', '',
  '- Node.js 24.21.0 (MIT and bundled third-party licenses). [Source and release](https://nodejs.org/dist/v24.21.0/). The private runtime is used only by the media provider.',
  '- FFmpeg and Python are Ubuntu package dependencies, supplied by apt with their distribution license/source information.',
  '', 'Full bundled tool licenses are installed in `/usr/share/doc/rdm/media-licenses/`. Executable versions and checksums are pinned in `packaging/media-tools.json`.']
-(root/'THIRD_PARTY_NOTICES.md').write_text('\n'.join(lines)+'\n')
+(root/'dist/THIRD_PARTY_NOTICES.md').write_text('\n'.join(lines)+'\n')
 print('Generated third-party notices and license texts.')

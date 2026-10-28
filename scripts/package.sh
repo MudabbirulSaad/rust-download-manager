@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  printf 'Release packaging requires Git and a committed source checkout.\n' >&2
+  exit 1
+fi
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+  printf 'Commit source changes before packaging so binaries and the source archive match.\n' >&2
+  exit 1
+fi
 task_target="${CARGO_TARGET_DIR:-target/ubuntu24}"
 task_stage="$(pwd)/dist/deb-root"
 rm -rf "$task_stage"
@@ -17,7 +25,8 @@ install -m644 packaging/rdm.service "$task_stage/usr/lib/systemd/user/rdm.servic
 install -m644 packaging/rdm.desktop "$task_stage/usr/share/applications/rdm.desktop"
 install -m644 src-tauri/icons/128x128.png "$task_stage/usr/share/icons/hicolor/128x128/apps/rdm.png"
 cp -R extensions/dist/. "$task_stage/usr/share/rdm/extensions/"
-cp LICENSE README.md THIRD_PARTY_NOTICES.md VERIFICATION.md "$task_stage/usr/share/doc/rdm/"
+cp LICENSE README.md VERIFICATION.md "$task_stage/usr/share/doc/rdm/"
+install -m644 dist/THIRD_PARTY_NOTICES.md "$task_stage/usr/share/doc/rdm/THIRD_PARTY_NOTICES.md"
 mkdir -p "$task_stage/usr/share/doc/rdm/media-licenses"
 cp .cache/media/NODE-LICENSE.txt .cache/media/YT-DLP-LICENSE .cache/media/YT-DLP-THIRD_PARTY_LICENSES.txt "$task_stage/usr/share/doc/rdm/media-licenses/"
 if [ -d dist/licenses ]; then cp -R dist/licenses "$task_stage/usr/share/doc/rdm/"; fi
@@ -44,5 +53,6 @@ for target in ['chromium','firefox']:
   for p in Path(f'extensions/dist/{target}').rglob('*'):
    if p.is_file():z.write(p,p.relative_to(f'extensions/dist/{target}'))
 PY
-tar --exclude='./dist' --exclude='./web-dist' --exclude='./target' --exclude='./node_modules' --exclude='./build' --exclude='./.agents' --exclude='./.cache' --exclude='./.git' --exclude='*.tsbuildinfo' --exclude='*.pyc' --exclude='__pycache__' -czf dist/rdm-0.2.2-source.tar.gz .
+# Never fall back to archiving arbitrary workspace files or generated outputs.
+git archive --format=tar HEAD | gzip -n > dist/rdm-0.2.2-source.tar.gz
 (cd dist && sha256sum rdm_0.2.2_amd64.deb rdm-extension-*-0.2.2.zip rdm-0.2.2-source.tar.gz > SHA256SUMS)
