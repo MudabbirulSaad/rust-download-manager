@@ -164,6 +164,26 @@ SQLite state is under `$XDG_DATA_HOME/rdm` (normally `~/.local/share/rdm`). The 
 
 Temporary `.rdm-<id>.part` files live beside their destination for atomic finalization. Only synced ranges become durable checkpoints. Resume requires a matching strong validator and exact response ranges. Files without a usable validator use a single stream; unsafe resumes require an explicit restart. Existing destination files are never replaced. **Remove** clears history and retains downloaded files; cancelled partials can be explicitly restarted.
 
+Development builds add content verification before finalization. New jobs persist
+their expected content (`auto`, `binary`, `html`, or `media`), inferred from the
+requested filename/source and response metadata. API callers can set the optional
+`expected_content` field explicitly. A server-provided filename cannot turn an
+expected binary download into an accepted HTML login page. Explicit HTML and
+untyped page downloads remain supported; unknown file types retain ordinary GET
+behavior. Existing history gains compatible defaults and completed history is
+not retroactively verified.
+
+Direct media and provider outputs must pass FFprobe container/stream checks that
+read every packet before a digest can journal completion. The verifier has no
+network/playlist access, bounded output, and a 30-second to 10-minute deadline
+scaled by file size. It stops on pause or backend termination. Invalid/truncated
+media remains in its private partial file with an actionable error; **Resume**
+retries verification of a fully durable body, and **Restart** fetches it again.
+This detects container/packet errors; it is not a supplied-checksum or semantic
+content guarantee. Use a backend advertising `content-validation-v1`; stop an
+older background service before testing the new build. Publication and installed
+upgrades are separate from this development change.
+
 Queues support daily local-time windows, including overnight windows. Missed windows wait for the next scheduled opening; suspended/logged-out sessions cannot transfer. Defaults: 3 downloads, 4 workers for large files, 8 connections per origin. A limit of zero means unlimited.
 
 Media work files live in a private `.rdm-<id>.media/` directory beside the destination and are removed after successful completion. A whole-file digest journals the final atomic, non-overwriting rename for videos too.

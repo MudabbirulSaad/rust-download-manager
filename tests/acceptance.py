@@ -7,6 +7,7 @@ from pathlib import Path
 BINARY=Path(os.environ.get('RDM_TEST_BACKEND','target/debug/rdm-backend')).resolve()
 DATA=bytes(range(256))*(80*1024)+b'rdm-end'
 SHA=hashlib.sha256(DATA).hexdigest()
+LOGIN=b'\xef\xbb\xbf<!-- login redirect -->\n<!DOCTYPE HTML><html><form>Sign in</form></html>'
 class Fixture(BaseHTTPRequestHandler):
     changed=False
     seen=[]
@@ -15,6 +16,11 @@ class Fixture(BaseHTTPRequestHandler):
     def do_GET(self):
         path=self.path.split('?')[0]
         Fixture.seen.append((path,self.headers.get('Range'),self.headers.get('Cookie')))
+        if path in ['/expired.zip','/expired.mp4','/login-no-type','/requested-html']:
+            self.send_response(200)
+            if path != '/login-no-type': self.send_header('Content-Type','text/html; charset=utf-8')
+            if path == '/expired.zip': self.send_header('Content-Disposition','attachment; filename="login.html"')
+            self.send_header('Content-Length',str(len(LOGIN)));self.end_headers();self.wfile.write(LOGIN);return
         if path=='/empty':
             self.send_response(416);self.send_header('Content-Range','bytes */0');self.send_header('Content-Length','0');self.end_headers();return
         if path=='/auth' and self.headers.get('Cookie')!='session=approved':
@@ -102,6 +108,25 @@ def main():
             complete(add('/drop-once'));assert Fixture.dropped;record('mid-body interruption retries without corrupting bytes')
             j=complete(add('/disposition'));assert j['filename']=='fixture.zip';record('server filename detection')
             id=add('/empty');j=wait(id,lambda j:j['status'] in ['completed','needs_attention']);assert j['status']=='completed' and j['total']==0;assert (Path(j['destination'])/j['filename']).read_bytes()==b'';record('empty range resource')
+            for path,extra,expected in [('/expired.zip',{},'binary'),('/expired.mp4',{},'media'),('/login-no-type',{'expected_content':'binary'},'binary')]:
+                id=add(path,**extra);j=wait(id,lambda j:j['status'] in ['completed','needs_attention','failed'])
+                assert j['status']=='needs_attention' and 'HTML' in j['error'],j
+                assert j['expected_content']==expected and j['sha256'] is None,j
+                assert not (Path(j['destination'])/j['filename']).exists()
+                assert (Path(j['destination'])/f'.rdm-{id}.part').read_bytes()==LOGIN
+            record('HTML login pages cannot complete expected archive/video or explicit binary jobs')
+            # Resume checks the durable local body again, retaining the original
+            # intent even when the response's filename was login.html.
+            time.sleep(.3);before=len(Fixture.seen);control(id,'resume')
+            j=wait(id,lambda j:j['status']=='needs_attention');assert 'HTML' in j['error']
+            assert len(Fixture.seen)==before,'Verification retry must not fetch a new body'
+            record('failed content verification retains bytes and safely retries without another GET')
+            for extra in [{'expected_content':'html','filename':'requested.html'},{}]:
+                id=add('/requested-html',**extra);j=wait(id,lambda j:j['status'] in ['completed','needs_attention'])
+                assert j['status']=='completed',j
+                assert (Path(j['destination'])/j['filename']).read_bytes()==LOGIN
+                assert j['sha256']==hashlib.sha256(LOGIN).hexdigest()
+            record('explicit HTML and backwards-compatible untyped HTML downloads retain exact hashes')
             for path in ['/no-range','/unknown','/redirect']:
                 complete(add(path));record(path+' transfer integrity')
             id=add('/malformed');j=wait(id,lambda j:j['status']=='needs_attention');assert 'range' in j['error'].lower();record('malformed ranges rejected')

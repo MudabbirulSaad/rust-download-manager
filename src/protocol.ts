@@ -8,8 +8,9 @@ export type MediaOptions = {
  * Zero selects the best available quality; other values cap video height.
  */
 max_height: number, };
-export type AddSpec = { url: string, destination: string | null, filename: string | null, queue_id: string, idempotency_key: string | null, context: RequestContext | null, media: MediaOptions | null, };
-export type Download = { id: string, url: string, filename: string, destination: string, queue_id: string, status: Status, total: number | null, downloaded: number, speed: number, active_connections: number, completed_ranges: Array<ByteRange>, validator: string | null, resumable: boolean, authenticated: boolean, error: string | null, created_at: string, speed_limit: number, idempotency_key: string | null, final_url: string | null, sha256: string | null, media: MediaOptions | null, media_stage: string | null, };
+export type ExpectedContent = "auto" | "binary" | "html" | "media";
+export type AddSpec = { url: string, destination: string | null, filename: string | null, queue_id: string, idempotency_key: string | null, context: RequestContext | null, media: MediaOptions | null, expected_content?: ExpectedContent, };
+export type Download = { id: string, url: string, filename: string, destination: string, queue_id: string, status: Status, total: number | null, downloaded: number, speed: number, active_connections: number, completed_ranges: Array<ByteRange>, validator: string | null, resumable: boolean, authenticated: boolean, error: string | null, created_at: string, speed_limit: number, idempotency_key: string | null, final_url: string | null, sha256: string | null, media: MediaOptions | null, media_stage: string | null, expected_content?: ExpectedContent, response_content_type?: string, };
 export type Queue = { id: string, name: string, concurrency: number, enabled: boolean, start_time: string | null, stop_time: string | null, };
 export type Settings = { max_downloads: number, connections_per_file: number, connections_per_origin: number, speed_limit: number, download_directory: string, };
 export type Snapshot = { downloads: Array<Download>, queues: Array<Queue>, settings: Settings, };

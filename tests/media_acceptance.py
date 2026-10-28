@@ -35,6 +35,10 @@ def main():
                         str(fixtures/'hls/index.txt')],check=True)
         (fixtures/'hls/playlist.txt').write_text('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=640x360\nindex.txt\n')
         original = (fixtures / 'video.mp4').read_bytes()
+        invalid = b'This is not a media container.'
+        truncated = original[:len(original)//2]
+        (fixtures/'invalid.mp4').write_bytes(invalid)
+        (fixtures/'truncated.mp4').write_bytes(truncated)
 
         class Fixture(BaseHTTPRequestHandler):
             seen = []
@@ -56,7 +60,7 @@ def main():
                 if path == '/auth-page' and self.headers.get('Cookie') != 'session=approved':
                     self.send_response(401); self.end_headers(); return
                 if path.endswith('page'):
-                    source = '/manifest.mpd' if path == '/dash-page' else '/slow.mp4' if path == '/slow-page' else '/referer.mp4' if path == '/referer-page' else '/video.mp4'
+                    source = {'/dash-page':'/manifest.mpd','/slow-page':'/slow.mp4','/referer-page':'/referer.mp4','/invalid-page':'/invalid.mp4','/truncated-page':'/truncated.mp4'}.get(path,'/video.mp4')
                     body = f'<html><title>RDM local video</title><video controls src="{source}"></video></html>'.encode()
                     self.send_response(200); self.send_header('Content-Type', 'text/html'); self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
                 file = fixtures / ('video.mp4' if path in ('/slow.mp4','/referer.mp4') else path.lstrip('/'))
@@ -122,6 +126,25 @@ def main():
             assert add('/page', idempotency_key='media-fixture') == id
             print('PASS media page extraction, exact hash, title and idempotent acknowledgement', flush=True)
 
+            direct_id=request({'type':'add','spec':{'url':base+'/video.mp4','destination':str(root/'files')}})['id']
+            direct=wait(direct_id,lambda j:j['status']=='completed')
+            assert direct['expected_content']=='media' and direct['sha256']==hashlib.sha256(original).hexdigest()
+            print('PASS direct HTTP media is probed before completion and retains the source hash',flush=True)
+            for path,body,provider in [('/invalid.mp4',invalid,False),('/truncated.mp4',truncated,False),('/invalid-page',invalid,True),('/truncated-page',truncated,True)]:
+                identifier=add(path) if provider else request({'type':'add','spec':{'url':base+path,'destination':str(root/'files')}})['id']
+                failed=wait(identifier,lambda j:j['status'] in ['completed','needs_attention'])
+                assert failed['status']=='needs_attention' and 'invalid or truncated' in failed['error'],failed
+                assert failed['sha256'] is None and not Path(failed['destination'],failed['filename']).exists()
+                assert Path(failed['destination'],f'.rdm-{identifier}.part').read_bytes()==body
+            print('PASS invalid and truncated HTTP/provider media are retained without publishing a completed file',flush=True)
+            before=len(Fixture.seen)
+            time.sleep(.3);request({'type':'control','ids':[identifier],'action':'resume'})
+            failed=wait(identifier,lambda j:j['status']=='needs_attention')
+            assert failed['sha256'] is None and len(Fixture.seen)==before
+            proc.kill();proc.wait();time.sleep(.3);start()
+            assert job(identifier)['expected_content']=='media' and job(identifier)['status']=='needs_attention'
+            print('PASS failed media verification survives resume and backend termination without redownloading or false completion',flush=True)
+
             id = add('/dash-page')
             done = wait(id, lambda j: j['status'] == 'completed')
             output = Path(done['destination'], done['filename'])
@@ -181,6 +204,45 @@ def main():
             print('PASS unsupported player pages explain stream capture recovery',flush=True)
             request({'type': 'add', 'spec': {'url': base+'/page', 'media': {'max_height': 999}}}, fail=True)
             print('PASS invalid video quality rejected', flush=True)
+
+            # Hold only the verifier, never fake a successful media result. This
+            # exposes the cancellation/crash window after a durable HTTP body.
+            request({'type':'shutdown'});proc.wait(timeout=15)
+            fake_tools=root/'held-verifier';fake_tools.mkdir()
+            marker=root/'verifier.pid'
+            verifier=fake_tools/'ffprobe'
+            verifier.write_text('#!/usr/bin/python3\nimport os,time\nfrom pathlib import Path\nPath('+repr(str(marker))+').write_text(str(os.getpid()))\ntime.sleep(300)\n')
+            verifier.chmod(0o700)
+            actual_path=env.get('PATH',os.environ['PATH'])
+            env['PATH']=str(fake_tools)+os.pathsep+actual_path
+            start()
+            held=request({'type':'add','spec':{'url':base+'/video.mp4','destination':str(root/'files')}})['id']
+            deadline=time.monotonic()+20
+            while not marker.exists() and time.monotonic()<deadline: time.sleep(.05)
+            assert marker.exists(),job(held)
+            verifier_pid=int(marker.read_text())
+            request({'type':'control','ids':[held],'action':'pause'})
+            def verifier_stopped(pid):
+                try: return Path(f'/proc/{pid}/stat').read_text().split(') ',1)[1].startswith('Z')
+                except FileNotFoundError: return True
+            deadline=time.monotonic()+10
+            while not verifier_stopped(verifier_pid) and time.monotonic()<deadline: time.sleep(.05)
+            assert verifier_stopped(verifier_pid),'Pause left the verifier running'
+            wait(held,lambda j:j['status']=='paused' and j['active_connections']==0)
+            time.sleep(.3);marker.unlink()
+            request({'type':'control','ids':[held],'action':'resume'})
+            deadline=time.monotonic()+20
+            while not marker.exists() and time.monotonic()<deadline: time.sleep(.05)
+            assert marker.exists(),job(held)
+            verifier_pid=int(marker.read_text());before=len(Fixture.seen)
+            proc.kill();proc.wait()
+            deadline=time.monotonic()+10
+            while not verifier_stopped(verifier_pid) and time.monotonic()<deadline: time.sleep(.05)
+            assert verifier_stopped(verifier_pid),'Backend termination orphaned the verifier'
+            env['PATH']=actual_path;start()
+            recovered=wait(held,lambda j:j['status']=='completed')
+            assert recovered['sha256']==hashlib.sha256(original).hexdigest() and len(Fixture.seen)==before
+            print('PASS verification pause/SIGKILL terminate the helper and resume durable bytes through real FFprobe',flush=True)
         finally:
             if proc and proc.poll() is None:
                 try: request({'type': 'shutdown'})

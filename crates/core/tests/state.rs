@@ -3,6 +3,34 @@ use rdm_core::{
     store::Store,
 };
 use rdm_protocol::*;
+#[tokio::test]
+async fn content_intent_survives_history_reload_and_legacy_defaults() {
+    let directory = tempfile::tempdir().unwrap();
+    let engine = Engine::open(directory.path()).unwrap();
+    engine.command(serde_json::from_value(serde_json::json!({"type":"add", "spec":{
+        "url":"https://example.com/file.zip", "filename":"saved.html", "expected_content":"html",
+        "destination":directory.path().to_str().unwrap()
+    }})).unwrap()).await.unwrap();
+    let mut snapshot = engine.snapshot().await;
+    assert_eq!(
+        snapshot.downloads[0].expected_content,
+        Some(ExpectedContent::Html)
+    );
+    drop(engine);
+    let store = Store::open(&directory.path().join("downloads.sqlite3")).unwrap();
+    assert_eq!(
+        store.load().unwrap().downloads[0].expected_content,
+        Some(ExpectedContent::Html)
+    );
+    snapshot.downloads[0].expected_content = None;
+    store.save(&snapshot).unwrap();
+    let recovered = store.load().unwrap();
+    assert_eq!(
+        recovered.downloads[0].expected_content,
+        Some(ExpectedContent::Binary)
+    );
+    assert_eq!(recovered.downloads[0].id, snapshot.downloads[0].id);
+}
 #[test]
 fn overnight_schedules_and_disabled_queues() {
     let mut q = Queue {
@@ -40,6 +68,7 @@ async fn rejects_cookie_from_a_different_origin_and_invalid_queue() {
         destination: Some(dir.path().to_str().unwrap().into()),
         filename: None,
         media: None,
+        expected_content: None,
         queue_id: "main".into(),
         idempotency_key: None,
         context: Some(RequestContext {
