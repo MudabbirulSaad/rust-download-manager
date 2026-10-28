@@ -25,7 +25,8 @@ install -m644 packaging/rdm.service "$task_stage/usr/lib/systemd/user/rdm.servic
 install -m644 packaging/rdm.desktop "$task_stage/usr/share/applications/rdm.desktop"
 install -m644 src-tauri/icons/128x128.png "$task_stage/usr/share/icons/hicolor/128x128/apps/rdm.png"
 cp -R extensions/dist/. "$task_stage/usr/share/rdm/extensions/"
-cp LICENSE README.md THIRD_PARTY_NOTICES.md VERIFICATION.md "$task_stage/usr/share/doc/rdm/"
+cp LICENSE README.md VERIFICATION.md "$task_stage/usr/share/doc/rdm/"
+install -m644 dist/THIRD_PARTY_NOTICES.md "$task_stage/usr/share/doc/rdm/THIRD_PARTY_NOTICES.md"
 mkdir -p "$task_stage/usr/share/doc/rdm/media-licenses"
 cp .cache/media/NODE-LICENSE.txt .cache/media/YT-DLP-LICENSE .cache/media/YT-DLP-THIRD_PARTY_LICENSES.txt "$task_stage/usr/share/doc/rdm/media-licenses/"
 if [ -d dist/licenses ]; then cp -R dist/licenses "$task_stage/usr/share/doc/rdm/"; fi

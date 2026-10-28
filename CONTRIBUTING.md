@@ -24,3 +24,6 @@ The `v0.2.2` tag preserves the original published baseline. Candidate source
 archives come from `git archive HEAD`; build artifacts are linked to exact source
 commits and CI runs. Generate third-party notices with
 `python3 scripts/notices.py` and verify `dist/SHA256SUMS` after a release build.
+The build-specific notice and license copies go into `dist/`; packaging installs
+that generated notice without rewriting the committed source notice. Cargo caches
+can contain different platform dependencies, so generated notices are build output.

@@ -1,11 +1,45 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import {copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {execFileSync} from 'node:child_process';
 import {loadProject, findTicket, validateContracts, requirementsHash, requiredChecks, validateHandoff, reconcileCompletion} from '../scripts/agent-workflow.mjs';
 
 const project = loadProject();
 const clone = value => structuredClone(value);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+test('build-specific license notices preserve clean source across different Cargo caches', () => {
+  const work = mkdtempSync(join(tmpdir(), 'rdm-notices-'));
+  try {
+    const root = join(work, 'repo'), cargo = join(work, 'cargo');
+    mkdirSync(join(root, 'scripts'), {recursive: true});
+    copyFileSync(new URL('../scripts/notices.py', import.meta.url), join(root, 'scripts/notices.py'));
+    writeFileSync(join(root, '.gitignore'), '/dist/\n');
+    writeFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'Committed source notice\n');
+    writeFileSync(join(root, 'Cargo.lock'), 'version = 4\n[[package]]\nname = "fixture"\nversion = "1.0.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n');
+    writeFileSync(join(root, 'package-lock.json'), '{"packages":{}}');
+    const git = args => execFileSync('git', args, {cwd: root, encoding: 'utf8'});
+    git(['init', '-q']); git(['add', '.']);
+    git(['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgSign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'fixture']);
+    const pkg = join(cargo, 'registry/src/test/fixture-1.0.0');
+    mkdirSync(pkg, {recursive: true});
+    writeFileSync(join(pkg, 'Cargo.toml'), '[package]\nname="fixture"\nversion="1.0.0"\nlicense="MIT"\n');
+    writeFileSync(join(pkg, 'LICENSE'), 'Fixture license text\n');
+    const generate = cache => execFileSync('python3', ['scripts/notices.py'], {cwd: root, env: {...process.env, CARGO_HOME: cache}});
+    generate(cargo);
+    assert.equal(readFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'), 'Committed source notice\n');
+    assert.match(readFileSync(join(root, 'dist/THIRD_PARTY_NOTICES.md'), 'utf8'), /fixture 1\.0\.0: MIT/);
+    assert.equal(readFileSync(join(root, 'dist/licenses/rust-fixture-1.0.0/LICENSE'), 'utf8'), 'Fixture license text\n');
+    assert.equal(git(['status', '--porcelain']), '');
+    generate(join(work, 'empty-cargo-cache'));
+    assert.doesNotMatch(readFileSync(join(root, 'dist/THIRD_PARTY_NOTICES.md'), 'utf8'), /fixture 1\.0\.0/);
+    assert.equal(readFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'), 'Committed source notice\n');
+    assert.equal(git(['status', '--porcelain']), '');
+  } finally { rmSync(work, {recursive: true, force: true}); }
+});
 function fixture(code = 'B04', environment = 'local') {
   const ticket = clone(project.plan.tickets.find(t => t.code === code));
   const registry = project.registry;
