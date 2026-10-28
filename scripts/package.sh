@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  printf 'Release packaging requires Git and a committed source checkout.\n' >&2
+  exit 1
+fi
+if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
+  printf 'Commit source changes before packaging so binaries and the source archive match.\n' >&2
+  exit 1
+fi
 task_target="${CARGO_TARGET_DIR:-target/ubuntu24}"
 task_stage="$(pwd)/dist/deb-root"
 rm -rf "$task_stage"
@@ -44,10 +52,6 @@ for target in ['chromium','firefox']:
   for p in Path(f'extensions/dist/{target}').rglob('*'):
    if p.is_file():z.write(p,p.relative_to(f'extensions/dist/{target}'))
 PY
-if git rev-parse --verify HEAD >/dev/null 2>&1; then
-  # Exact reviewed source, including repository skills, with no ignored local data.
-  git archive --format=tar HEAD | gzip -n > dist/rdm-0.2.2-source.tar.gz
-else
-  tar --exclude='./dist' --exclude='./web-dist' --exclude='./target' --exclude='./node_modules' --exclude='./build' --exclude='./.agents/skills/reverse-engineer-anything' --exclude='./.cache' --exclude='./.git' --exclude='./.agent-runs' --exclude='./planning/*.jpg' --exclude='./planning/*.png' --exclude='*.tsbuildinfo' --exclude='*.pyc' --exclude='__pycache__' -czf dist/rdm-0.2.2-source.tar.gz .
-fi
+# Never fall back to archiving arbitrary workspace files or generated outputs.
+git archive --format=tar HEAD | gzip -n > dist/rdm-0.2.2-source.tar.gz
 (cd dist && sha256sum rdm_0.2.2_amd64.deb rdm-extension-*-0.2.2.zip rdm-0.2.2-source.tar.gz > SHA256SUMS)

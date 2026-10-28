@@ -95,6 +95,11 @@ The development frontend listens only on `127.0.0.1:1420`. Its browser preview i
 
 Create the complete release on Ubuntu 24.04:
 
+Release packaging requires a clean Git checkout with the source changes committed.
+Its source archive is generated from that exact commit; arbitrary workspace files
+and generated outputs are excluded. A source archive can build the app, but create
+a Git checkout before producing distribution packages from it.
+
 ```bash
 npm run release
 ```
