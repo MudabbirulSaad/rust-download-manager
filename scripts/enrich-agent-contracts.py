@@ -157,7 +157,7 @@ def main():
         for t in plan['tickets']]
     (ROOT / 'planning/jira-agent-updates.json').write_text(json.dumps(payloads, indent=2, ensure_ascii=False) + '\n')
     with (ROOT / 'planning/jira-agent-updates.csv').open('w', newline='') as out:
-        writer = csv.writer(out)
+        writer = csv.writer(out, lineterminator='\n')
         writer.writerow(['Issue key', 'Summary', 'Description', 'Labels', 'Labels', 'Labels'])
         for t in plan['tickets']:
             writer.writerow([t['agent']['key'], t['title'], description(t),
