@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import sqlite3
 import subprocess
 import tempfile
 import threading
@@ -64,7 +65,12 @@ with tempfile.TemporaryDirectory(prefix='rdm-package-life-') as temporary:
         request({'type': 'shutdown'})
         child.wait(timeout=20)
     subprocess.run(['apt-get', 'remove', '-y', 'rdm'], check=True)
-    assert (root/'data/state.db').is_file()
+    database = root/'data/downloads.sqlite3'
+    assert database.is_file(), 'Removing the package erased the private database'
+    with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as connection:
+        persisted = json.loads(connection.execute("SELECT value FROM state WHERE key='snapshot'").fetchone()[0])
+    retained = next(j for j in persisted['downloads'] if j['id'] == identifier)
+    assert retained['status'] == 'completed' and retained['sha256'] == SHA
     assert hashlib.sha256(output.read_bytes()).hexdigest() == SHA
     print('PASS installed package reinstall and removal preserve private history and exact downloaded bytes', flush=True)
 server.shutdown()
