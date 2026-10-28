@@ -1,7 +1,8 @@
 ARG UBUNTU_VERSION=24.04
 FROM ubuntu:${UBUNTU_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
-COPY dist/rdm_0.2.2_amd64.deb /tmp/rdm.deb
+ARG RDM_VERSION=0.2.2
+COPY dist/rdm_${RDM_VERSION}_amd64.deb /tmp/rdm.deb
 RUN apt-get update \
     && if apt-cache show webkit2gtk-driver 2>/dev/null | grep -q '^Version:'; then task_driver=webkit2gtk-driver; else task_driver=webkitgtk-webdriver; fi \
     && apt-get install -y --no-install-recommends /tmp/rdm.deb \

@@ -44,5 +44,10 @@ for target in ['chromium','firefox']:
   for p in Path(f'extensions/dist/{target}').rglob('*'):
    if p.is_file():z.write(p,p.relative_to(f'extensions/dist/{target}'))
 PY
-tar --exclude='./dist' --exclude='./web-dist' --exclude='./target' --exclude='./node_modules' --exclude='./build' --exclude='./.agents' --exclude='./.cache' --exclude='./.git' --exclude='*.tsbuildinfo' --exclude='*.pyc' --exclude='__pycache__' -czf dist/rdm-0.2.2-source.tar.gz .
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  # Exact reviewed source, including repository skills, with no ignored local data.
+  git archive --format=tar HEAD | gzip -n > dist/rdm-0.2.2-source.tar.gz
+else
+  tar --exclude='./dist' --exclude='./web-dist' --exclude='./target' --exclude='./node_modules' --exclude='./build' --exclude='./.agents/skills/reverse-engineer-anything' --exclude='./.cache' --exclude='./.git' --exclude='./.agent-runs' --exclude='./planning/*.jpg' --exclude='./planning/*.png' --exclude='*.tsbuildinfo' --exclude='*.pyc' --exclude='__pycache__' -czf dist/rdm-0.2.2-source.tar.gz .
+fi
 (cd dist && sha256sum rdm_0.2.2_amd64.deb rdm-extension-*-0.2.2.zip rdm-0.2.2-source.tar.gz > SHA256SUMS)

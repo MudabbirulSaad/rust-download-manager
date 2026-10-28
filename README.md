@@ -2,6 +2,16 @@
 
 A local, GPL-3.0-only download manager for Ubuntu, with a Rust background service and a Tauri 2 / React desktop app. This is an original implementation; the proprietary installer in `build/` is a reference input and is never packaged.
 
+## Work with coding agents
+
+The public source is [MudabbirulSaad/rust-download-manager](https://github.com/MudabbirulSaad/rust-download-manager).
+Locally, ask: **Use $rdm-implement-ticket to implement RDM-15.** In a fresh prepared
+Codex Cloud task, ask: **Use $rdm-review-ticket to review RDM-15, fix in-scope issues,
+run required checks, then merge and close only if every gate passes.**
+See [the agent workflow](docs/agent-workflow.md) for setup, ticket readiness, exact
+revision evidence and recovery after interrupted handoffs. `AGENTS.md` and the two
+repository skills carry the same guidance into local and cloud work.
+
 ## Install the Ubuntu build
 
 Download/build `dist/rdm_0.2.2_amd64.deb`, then:

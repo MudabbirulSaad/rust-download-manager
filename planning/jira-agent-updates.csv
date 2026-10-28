@@ -1,0 +1,2093 @@
+Issue key,Summary,Description,Labels,Labels,Labels
+RDM-12,Refresh expired download addresses without discarding valid partial data,"Jobs store their current URL but have no refresh-address command or durable original-page identity. A renewed signed URL currently becomes a separate job.
+
+Outcome
+Persist the original page and a refresh correlation identifier; add backend and desktop refresh actions; accept a fresh browser handoff into the existing job.
+
+Boundaries
+Replacing a source is not permission to append bytes from a different representation.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+crates/core/src/transfer.rs
+extensions/src/shared.ts
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Refresh the existing job only after file identity validation; preserve idempotency and durable ranges.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: A local fixture expires a URL halfway through a file; a fresh browser URL refreshes the existing job rather than adding a duplicate.
+AC-2: Resume retains bytes only when representation identity, size and validators establish the same file; changed content requires an explicit restart.
+AC-3: The completed hash matches the fixture and refresh correlation does not accept an unrelated file.
+
+Verification
+npm run agent:ticket -- RDM-12
+npm run agent:validate
+npm run agent:check -- --ticket RDM-12 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-12 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-12 | planning ID B01
+Requirements SHA-256: c00ba78ff963404353d8ae7b02e6bd7f89cbd3b09804beee4f319add28f863aa
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b01,agent-ready
+RDM-13,Restore public browser request context and guide reauthorization after backend restart,"Request contexts are held only in memory. Restarting the service loses Origin/Referer and user-agent context as well as deliberately ephemeral cookies.
+
+Outcome
+Persist an allowlisted, non-secret public context and original-page metadata; keep cookies and credentials ephemeral; identify jobs requiring browser reauthorization.
+
+Boundaries
+Do not persist cookies, bearer tokens, signed page-query parameters or browser profile databases.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/store.rs
+crates/core/src/engine.rs
+crates/protocol/src/lib.rs
+media/worker.py
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+
+Contracts
+Persist only explicitly allowlisted public metadata, separate from the in-memory credential context.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-12
+
+Acceptance criteria
+AC-1: An Origin/Referer-protected HLS fixture resumes after service termination without manual header reconstruction.
+AC-2: No cookies, bearer tokens or credential-bearing page queries appear in persisted public context or diagnostic exports.
+AC-3: A signed-in job lacking credentials presents a browser refresh action and resumes the same job after an approved fresh handoff.
+
+Verification
+npm run agent:ticket -- RDM-13
+npm run agent:validate
+npm run agent:check -- --ticket RDM-13 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-13 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-12
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-13 | planning ID B02
+Requirements SHA-256: 7c0390b16d033471fb0cae4482aced977efb330675524e735b63053ff795d104
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b02,agent-blocked
+RDM-14,Associate detected streams with the intended video and embedded frame,"Resource Timing and validated text playlists work, but recent advertising manifests or multiple frames can produce ambiguous candidates.
+
+Outcome
+Associate candidates with their player/frame and navigation; prefer the selected main video; show a choice when ambiguous; request narrowly scoped capture permissions when required.
+
+Boundaries
+Do not select an advertisement, individual fragment, blob URL or arbitrary parent HTML as a complete video.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+extensions/src/content.ts
+extensions/src/media-source.ts
+extensions/src/background.ts
+tests/browser_chromium.mjs
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+
+Contracts
+Use frame/player/navigation identity in candidate selection; an ambiguous selection needs an explicit choice.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: Fixtures with a main player, an advertisement and multiple iframes enqueue the selected main video.
+AC-2: HLS, DASH, extensionless manifests, validated playlist.txt resources and SPA navigation are covered in Brave and Firefox tests.
+AC-3: CORS-denied or browser-bound sources produce an actionable unsupported state and do not enqueue a blob URL or unrelated HTML page.
+
+Verification
+npm run agent:ticket -- RDM-14
+npm run agent:validate
+npm run agent:check -- --ticket RDM-14 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-14 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-14 | planning ID B03
+Requirements SHA-256: a7207635fbd5477d4413dd42421fde85b097f57e07149d83ad66de7cf4065dfd
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b03,agent-ready
+RDM-15,Validate expected file content and completed media before reporting success,"The HTTP engine accepts successful response bodies without an expected-content check; the media worker currently relies on output filenames and provider completion.
+
+Outcome
+Record expected content intent; detect HTML login/error pages for expected binary files; validate final media with FFprobe before final completion.
+
+Boundaries
+Explicit HTML downloads remain valid. Failed media validation must retain recovery files and never publish a completed filename.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+media/worker.py
+tests/media_acceptance.py
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+
+Contracts
+Carry expected content intent through typed job state; inspect unexpected HTML and verify final media before atomic completion.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: A 200 response containing a login page cannot complete a job that expects a video or archive; deliberately requested HTML remains supported.
+AC-2: Truncated or invalid media is retained for recovery and never shown as Complete.
+AC-3: Valid HTTP fixtures retain exact hashes and valid media passes a container/stream probe.
+
+Verification
+npm run agent:ticket -- RDM-15
+npm run agent:validate
+npm run agent:check -- --ticket RDM-15 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-15 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-15 | planning ID B04
+Requirements SHA-256: 40570f24496f3eb1398be5632fb9b7d2ca2ba28d8de30af0bd662866548f1a5d
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b04,agent-ready
+RDM-16,Recover automatically when connectivity or the background service returns,"Request-level retries exist, but exhausted attempts become Needs attention and the desktop reconnects manually.
+
+Outcome
+Add retryable failure categories, persistent retry budgets and waiting states; reconnect the desktop with backoff and obtain a fresh snapshot; handle offline and sleep/wake transitions.
+
+Boundaries
+No busy retry loop, automatic unsafe append, or implied login-startup change.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+crates/core/src/engine.rs
+src-tauri/src/main.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Classify retryable transport failures separately from authentication/content changes; make backoff cancellable.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-13
+
+Acceptance criteria
+AC-1: Disconnecting and restoring the fixture network resumes retryable downloads without duplicate bytes.
+AC-2: The GUI reconnects to a restarted service and replaces stale progress with a fresh snapshot.
+AC-3: Authentication and content-change errors wait for the appropriate user action; cancellation interrupts retry delays; Retry-After dates and seconds are tested.
+
+Verification
+npm run agent:ticket -- RDM-16
+npm run agent:validate
+npm run agent:check -- --ticket RDM-16 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-16 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-13
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-16 | planning ID B05
+Requirements SHA-256: cbbb18a2e1a26cf00e4ecdcf46fa1c1965d4ba18a9787928647d741b5e946319
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b05,agent-blocked
+RDM-17,Check destination space and manage abandoned partial downloads,"Write failures are surfaced, but there is no preflight space budget, merge-space estimate, partial cleanup view or destination recovery workflow.
+
+Outcome
+Check writable destinations and available space when size is known; account for merge overhead; expose retained partials and explicit cleanup/recovery actions.
+
+Boundaries
+Do not delete partials, completed files or unrelated files without the user-selected cleanup operation.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+crates/core/src/engine.rs
+src/App.tsx
+tests/io_failures.py
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Use the selected destination filesystem for space checks, with media merge overhead; cleanup only identified RDM-owned partials.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: Known oversized downloads are held before transfer and show the required versus available space.
+AC-2: A disk-full fixture retains durable progress and resumes after storage is recovered or an explicitly selected destination is prepared.
+AC-3: Cleanup identifies only RDM-owned partials, requires an explicit user action and leaves completed and unrelated files intact.
+
+Verification
+npm run agent:ticket -- RDM-17
+npm run agent:validate
+npm run agent:check -- --ticket RDM-17 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-17 --environment cloud --base origin/main
+
+Required local evidence
+package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-17 | planning ID B06
+Requirements SHA-256: 099b00b3f2ad0ffaec394fe83f3964a1a71e37a8ddbac435877173e68834bdc1
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b06,agent-ready
+RDM-18,Provide persistent browser installation and component-version health checks,"Brave uses an unpacked developer extension and Firefox uses a temporary add-on. Protocol health does not expose the full app/host/provider/extension compatibility picture.
+
+Outcome
+Prepare signed Firefox and normal Brave distribution; add setup and permission diagnostics plus explicit component version reporting and upgrade guidance.
+
+Boundaries
+Store credentials and publication approval are external dependencies, not inferred by a coding agent.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+extensions/src/popup.ts
+extensions/src/shared.ts
+crates/backend/src/main.rs
+scripts/build-extensions.mjs
+README.md
+tests/agent-workflow.test.mjs
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Separate version/connection diagnostics, reproducible extension packaging and external store/signing approval.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: Both extensions survive browser restart through their supported permanent installation channels.
+AC-2: The setup screen identifies browser, extension, native host, backend and provider versions and detects mismatches.
+AC-3: Firefox Snap connects through its actual portal path and a denied permission results in a clear recovery action; no access is silently pre-granted.
+
+Verification
+npm run agent:ticket -- RDM-18
+npm run agent:validate
+npm run agent:check -- --ticket RDM-18 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-18 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive; package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+needs-refinement: Permanent distribution requires external signing/store ownership; use separate diagnostic, packaging and approval subtasks.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-18 | planning ID B07
+Requirements SHA-256: 4eb310e8b4a5073e7f3a7e582beb147d3749b47d1d574db5893afb8db1ebc210
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b07,needs-refinement
+RDM-19,Edit download properties and distinguish history removal from file deletion,"Existing jobs have no rename, move or description-edit commands. Remove clears history and can leave partials without a management view.
+
+Outcome
+Add editable properties, source-page/link actions, collision-safe rename/move and distinct history-only and file-deletion actions.
+
+Boundaries
+History removal must not become implicit disk deletion.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+src-tauri/src/main.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Apply filesystem changes without overwriting; update persistent paths only after a successful move/rename.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-17
+
+Acceptance criteria
+AC-1: A paused or completed download can be renamed or moved without overwriting another file; failures preserve a usable original.
+AC-2: Descriptions and destinations survive restart and the Open file/Open folder actions follow the updated paths.
+AC-3: History removal keeps files; file deletion is an explicitly selected action with a clear list of affected files.
+
+Verification
+npm run agent:ticket -- RDM-19
+npm run agent:validate
+npm run agent:check -- --ticket RDM-19 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-19 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-17
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-19 | planning ID B08
+Requirements SHA-256: 525aa5964ccaefc9aeebc83e6e124e310dfdb092643cf03522b38f6a871c1f6f
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b08,agent-blocked
+RDM-20,Show download information with Download now and Download later actions,"Add URL currently submits a destination and queue immediately, without a metadata preview or per-job deferred-start option.
+
+Outcome
+Probe metadata without accepting a transfer; preview filename, type, known/estimated size, destination and queue; allow explicit immediate or deferred start.
+
+Boundaries
+Preview must not silently create/start a durable transfer.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Reuse validated metadata probing; distinguish a per-job held state from disabling a shared queue.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-15, RDM-19
+
+Acceptance criteria
+AC-1: Preview does not start a persistent transfer and unknown sizes are labelled honestly.
+AC-2: Download later creates one durable queued/held job without disabling unrelated queue members.
+AC-3: Edited filenames and destination choices are validated and preserved when Download now is selected.
+
+Verification
+npm run agent:ticket -- RDM-20
+npm run agent:validate
+npm run agent:check -- --ticket RDM-20 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-20 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-15, RDM-19
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-20 | planning ID B09
+Requirements SHA-256: c3aee355fcc6330fdb9240a70d9482d0ee78427ce2ba77ac3f996e51b0ca7063
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b09,agent-blocked
+RDM-21,"Reorder, prioritize and move downloads between queues fairly","Queues can be created and scheduled, but jobs cannot be moved or explicitly reordered and earlier queues can consume all global slots.
+
+Outcome
+Persist queue ordering and job priority; add queue reassignment/deletion and direct start/stop controls; define fair allocation under global and origin limits.
+
+Boundaries
+Deleting a queue does not remove files or silently orphan jobs.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Persist explicit ordering and priority; validate scheduler fairness under queue, global and origin ceilings.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: Reordering and moving paused/queued jobs changes execution order and survives service restart.
+AC-2: Two continuously populated enabled queues both make progress while all global, queue and origin ceilings hold.
+AC-3: Deleting a nonempty queue requires an explicit reassignment policy and never deletes downloaded files.
+
+Verification
+npm run agent:ticket -- RDM-21
+npm run agent:validate
+npm run agent:check -- --ticket RDM-21 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-21 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-21 | planning ID B10
+Requirements SHA-256: 85ed554dc9bea68b6873024da677796ff007f6eaa6b996104ba469c29e751e7d
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b10,agent-ready
+RDM-22,Route downloads to editable categories and destination folders,"Categories are fixed frontend filters derived from extensions; they do not assign folders or persist custom rules.
+
+Outcome
+Create editable categories and ordered rules for filename, domain and file type; preview rule matches and allow per-job overrides.
+
+Boundaries
+Changing a category rule must not silently move existing files.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Add ordered rules and a match preview on top of destination validation; preserve manual overrides.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-19, RDM-20
+
+Acceptance criteria
+AC-1: A new download is routed to the expected category and folder by tested rule precedence.
+AC-2: Users can add, edit and remove categories without changing or deleting existing downloaded files.
+AC-3: Rules and manual overrides persist and destination validation uses the storage safeguards.
+
+Verification
+npm run agent:ticket -- RDM-22
+npm run agent:validate
+npm run agent:check -- --ticket RDM-22 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-22 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Confirm rule precedence and migration/override behavior before marking ready.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-22 | planning ID B11
+Requirements SHA-256: f6a1deb215a9fc62d5150a9889447d003ddbc48f40b2b7134099d6d89a7fde7f
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b11,needs-refinement
+RDM-23,Configure browser capture rules and separate public capture from cookie consent,"Automatic capture is limited to approved sites and known GET requests; the UI has no granular include/exclude rules or approval-revocation management.
+
+Outcome
+Add site/file-type capture rules, temporary bypass, explicit cookie approval management and a public-capture policy separate from credential consent.
+
+Boundaries
+Never infer credential consent from content-script access or cancel before durable acknowledgement.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+extensions/src/background.ts
+extensions/src/shared.ts
+extensions/src/popup.ts
+tests/agent-workflow.test.mjs
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+
+Contracts
+Keep capture-policy decisions separate from optional cookie permissions and approved GET handoffs.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-18
+
+Acceptance criteria
+AC-1: Include/exclude rules and a temporary bypass deterministically decide which GET downloads are handed off.
+AC-2: Public capture does not read cookies; revoking a site removes future cookie access and updates the visible permission state.
+AC-3: A failed native acknowledgement retains/resumes the browser download; POST, blob and unsupported browser-bound jobs remain in the browser.
+
+Verification
+npm run agent:ticket -- RDM-23
+npm run agent:validate
+npm run agent:check -- --ticket RDM-23 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-23 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-18
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-23 | planning ID B12
+Requirements SHA-256: 74c584a53db015e865696a5308d1761aa49d273a7f1f1456800556e2e856e679
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b12,agent-blocked
+RDM-24,Collect page links and import bulk URL lists with a selection preview,"Multiline paste works, but there is no Download all links action, selected-text collection, file import/export or numbered URL generation.
+
+Outcome
+Collect eligible page/selection links; filter and deduplicate in a preview; import/export URL lists and expand bounded numeric URL patterns.
+
+Boundaries
+No recursive crawl, POST generation or unbounded numeric pattern expansion in this ticket.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+extensions/src/background.ts
+extensions/src/content.ts
+src/App.tsx
+crates/protocol/src/lib.rs
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Resolve relative page links, preview a bounded selected list and reuse durable handoff correlation.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-20, RDM-23
+
+Acceptance criteria
+AC-1: A fixture page with duplicate, relative and ineligible links produces only the selected HTTP/HTTPS jobs.
+AC-2: Import and numbered patterns show a bounded preview before durable acceptance and preserve per-item errors.
+AC-3: Repeated submission uses correlation keys and does not duplicate already accepted jobs.
+
+Verification
+npm run agent:ticket -- RDM-24
+npm run agent:validate
+npm run agent:check -- --ticket RDM-24 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-24 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-20, RDM-23
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-24 | planning ID B13
+Requirements SHA-256: 486723df07099a8f63183c7dc20a8662a5b8dee65193318d31bb9ad5426a806d
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b13,agent-blocked
+RDM-25,List available video formats instead of offering only a height ceiling,"MediaOptions currently contains max_height only; the UI cannot enumerate the actual codec, container, frame rate or available combinations.
+
+Outcome
+Add a media metadata/format discovery operation and a typed format selector with a predictable compatible fallback.
+
+Boundaries
+A quality cap is not an exact format and an unavailable selection must not be silently misreported.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/media.rs
+media/worker.py
+src/App.tsx
+extensions/src/popup.ts
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Expose actual provider format metadata and selected format identity; validate the final streams against the selection.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-14, RDM-15
+
+Acceptance criteria
+AC-1: The selector shows actual fixture formats, their resolution, codec, frame rate, container and known/estimated size.
+AC-2: Choosing a format downloads that format and verifies the resulting audio/video streams.
+AC-3: Unavailable or changed formats prompt a clear fallback choice without silently claiming the requested format was used.
+
+Verification
+npm run agent:ticket -- RDM-25
+npm run agent:validate
+npm run agent:check -- --ticket RDM-25 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-25 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-14, RDM-15
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-25 | planning ID B14
+Requirements SHA-256: af23ff8f8374878e68a57e19f4a151e0298676a837e69af00704a1a302a172a8
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b14,agent-blocked
+RDM-26,Preserve useful video titles and show duration and fragment progress,"Direct manifests often become playlist.mkv and total bytes may remain unknown, leaving progress and ETA unhelpful.
+
+Outcome
+Carry source-page/title metadata; sanitize and resolve output names; report duration, fragment counts, processing stages and labelled estimates.
+
+Boundaries
+Do not remove signed parameters from the actual media URL or invent a container extension.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+extensions/src/content.ts
+crates/protocol/src/lib.rs
+crates/core/src/media.rs
+media/worker.py
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Persist useful source/title metadata and report measured fragments/stages without fabricating byte totals.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-12, RDM-25
+
+Acceptance criteria
+AC-1: A direct signed manifest retains a useful title/source-page association without losing its complete stream URL.
+AC-2: Unknown-length HLS shows meaningful fragment/time progress without a fabricated byte percentage.
+AC-3: Filename collisions, title updates and progress survive pause/recovery and completed files use their actual container extension.
+
+Verification
+npm run agent:ticket -- RDM-26
+npm run agent:validate
+npm run agent:check -- --ticket RDM-26 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-26 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-12, RDM-25
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-26 | planning ID B15
+Requirements SHA-256: ebbb6440532c56e5b3e87a31f2917d9f8643907517b30b7a7e8fa09da78a5c65
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b15,agent-blocked
+RDM-27,Support scoped HTTP authentication and explicitly saved keyring credentials,"Cookie handoff exists, but manually added jobs do not support HTTP Basic, bearer tokens or an allowlisted custom-header workflow.
+
+Outcome
+Add per-origin credential/header profiles and optional Ubuntu keyring persistence selected by the user; define redirect and downgrade boundaries.
+
+Boundaries
+No global Authorization header, insecure downgrade leakage or secret-bearing exports.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/transfer.rs
+media/worker.py
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Bind credential/header profiles to origins and store secrets only in the explicitly enabled keyring.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-13
+
+Acceptance criteria
+AC-1: Basic and bearer fixtures complete only with the correct scoped credentials.
+AC-2: Unrelated-origin and downgrade redirects receive no credentials or sensitive custom headers.
+AC-3: Secrets are absent from SQLite, URLs, logs and exported diagnostics; saved credentials can be revoked from the UI.
+
+Verification
+npm run agent:ticket -- RDM-27
+npm run agent:validate
+npm run agent:check -- --ticket RDM-27 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-27 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-13
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-27 | planning ID B16
+Requirements SHA-256: 20d42a5374612a36764cafa2bdd6e7637c635ad2e41653250d67ef776b702de0
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b16,agent-blocked
+RDM-28,Configure authenticated proxies and diagnose browser/backend route mismatches,"There is no explicit application proxy configuration or UI explaining when a browser VPN/proxy differs from the backend path.
+
+Outcome
+Add HTTP/HTTPS and SOCKS configuration, authentication and bypass rules; show the effective configuration and a controlled connection test.
+
+Boundaries
+Browser-only VPN access is not automatically shared by the backend.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+media/worker.py
+crates/protocol/src/lib.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Define explicit versus environment proxy selection, exclusions and a shared route for both transfer engines.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-27
+
+Acceptance criteria
+AC-1: HTTP and media jobs pass controlled HTTP/SOCKS proxy fixtures with authentication and exclusions.
+AC-2: Invalid or unreachable proxies generate actionable errors without leaking passwords.
+AC-3: The UI distinguishes system/environment settings from explicit application settings and explains browser-only VPN limitations.
+
+Verification
+npm run agent:ticket -- RDM-28
+npm run agent:validate
+npm run agent:check -- --ticket RDM-28 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-28 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Confirm proxy precedence and supported SOCKS authentication combinations.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-28 | planning ID B17
+Requirements SHA-256: 2f5ec317b86bed79fa69daf6e60d3b6cd60887b1455a4b5217f8c2e11bc1e061
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b17,needs-refinement
+RDM-29,Apply live bandwidth limits fairly across HTTP and video jobs,"HTTP limits are live, but media limits and global concurrency changes require pausing videos and use conservative fixed reservations.
+
+Outcome
+Provide coordinated live limits for both engines, fair redistribution of unused capacity and per-site connection profiles.
+
+Boundaries
+Do not claim exact throughput or universal acceleration from UI counters alone.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/engine.rs
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+media/worker.py
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+
+Contracts
+Coordinate live rate changes across both engines and measure aggregate limits and fairness.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-21
+
+Acceptance criteria
+AC-1: Changing global and per-job limits while mixed HTTP/HLS transfers run takes effect without restarting a job.
+AC-2: Measured aggregate bandwidth remains within the documented tolerance and active jobs receive fair service.
+AC-3: Origin-specific connection limits remain enforced as settings and active jobs change.
+
+Verification
+npm run agent:ticket -- RDM-29
+npm run agent:validate
+npm run agent:check -- --ticket RDM-29 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-29 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Define the measured bandwidth tolerance and fairness acceptance fixture.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-29 | planning ID B18
+Requirements SHA-256: 40f676e2b79757ae0663dfc3dd96fface33b78af83e5485aeebade7c5cdeb46f
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b18,needs-refinement
+RDM-30,"Add Ubuntu tray controls, actionable notifications and optional sleep inhibition","Downloads continue after the GUI closes, but there is no tray, desktop completion/failure notification, single-instance reopen flow or active-transfer sleep policy.
+
+Outcome
+Integrate Ubuntu tray actions and notification actions; reopen the existing app window; expose an opt-in active-download sleep inhibitor.
+
+Boundaries
+No default sleep inhibition, shutdown action or replacement of desktop-session settings.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+src-tauri/src/main.rs
+src-tauri/tauri.conf.json
+crates/backend/src/main.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Use Tauri/Linux tray and notification APIs with stable job identifiers; tie inhibitors to active work.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-16
+
+Acceptance criteria
+AC-1: Closing all windows leaves downloads running and tray actions reopen the app or pause transfers.
+AC-2: Completion/failure notifications open the correct file or recovery details and respect notification preferences.
+AC-3: The optional sleep inhibitor is held only during active work and is released on pause, completion and service exit.
+
+Verification
+npm run agent:ticket -- RDM-30
+npm run agent:validate
+npm run agent:check -- --ticket RDM-30 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-30 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-16
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-30 | planning ID B19
+Requirements SHA-256: 0a7fd2e593e3f61aca8fa0623e1b2d82923b3870641ba9a0c569b41e394e7cfa
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b19,agent-blocked
+RDM-31,"Scale history beyond 1000 jobs with filters, retention and tested backup restore","History is one persisted JSON snapshot and adding a job is rejected at 1000 entries. Search currently matches filenames only.
+
+Outcome
+Add schema migration and indexed/paginated history, date/site/type filters, retention choices and portable backup/export/restore.
+
+Boundaries
+No destructive retention default or ephemeral credentials in backups.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/store.rs
+crates/core/src/engine.rs
+crates/protocol/src/lib.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Migrate SQLite compatibly, use indexed stable pagination and restore only into an isolated test directory.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-19
+
+Acceptance criteria
+AC-1: A library of at least 10000 generated jobs remains usable and accepts new jobs without the old hard stop.
+AC-2: Filters, sorting and pagination return stable results without blocking progress updates.
+AC-3: A backup restored into an isolated data directory preserves settings, queues and history while excluding ephemeral credentials.
+
+Verification
+npm run agent:ticket -- RDM-31
+npm run agent:validate
+npm run agent:check -- --ticket RDM-31 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-31 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-19
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-31 | planning ID B20
+Requirements SHA-256: 4e447082c0ecf6d92fd793ca153a4251f66561cd41da01d46b84b0c8e1bb11ff
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b20,agent-blocked
+RDM-32,Verify downloaded files against supplied SHA-256 values and checksum lists,"RDM calculates a completed digest for finalization but has no user-facing expected-checksum verification workflow.
+
+Outcome
+Accept a SHA-256 value or supported checksum list, associate entries with jobs and show verified/mismatch/unspecified states.
+
+Boundaries
+A locally computed digest without an expected value must not be called Verified.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Keep expected and measured digests distinct; preserve mismatch state and unambiguous checksum-list matching.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-15
+
+Acceptance criteria
+AC-1: A correct expected digest produces a Verified result; a modified fixture produces a mismatch and never claims verification success.
+AC-2: Checksum-list filename matching handles ambiguity and collisions explicitly.
+AC-3: The expected digest and verification result persist through restart and are included in appropriate exports.
+
+Verification
+npm run agent:ticket -- RDM-32
+npm run agent:validate
+npm run agent:check -- --ticket RDM-32 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-32 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-15
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-32 | planning ID B21
+Requirements SHA-256: 6448cfe692f386f2345577d8cfbb2979824ad8e9908b06ad83ec07f3e5a9546f
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b21,agent-blocked
+RDM-33,"Deliver signed application, extension and media-provider updates without disrupting jobs","Releases are manually installed .deb files and provider changes require a rebuild. Active components can remain on older versions until restart/reload.
+
+Outcome
+Define signed package/release distribution, component compatibility, coordinated update checks and a recoverable pause/update/reconnect flow.
+
+Boundaries
+Do not bypass signature validation or publish with credentials obtained from repository files.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+scripts/package.sh
+scripts/release.sh
+packaging/rdm.service
+crates/backend/src/main.rs
+README.md
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Separate trusted update verification, recovery coordination and distribution/signing operations.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-18, RDM-47, RDM-48
+
+Acceptance criteria
+AC-1: An installed Ubuntu baseline upgrades through the documented trusted channel and verifies repository/package signatures.
+AC-2: Active HTTP and media jobs are protected by a tested upgrade/recovery procedure with no duplicate or corrupted final files.
+AC-3: The UI reports component versions, release notes and required extension reloads; an invalid update is rejected and rollback is documented.
+
+Verification
+npm run agent:ticket -- RDM-33
+npm run agent:validate
+npm run agent:check -- --ticket RDM-33 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-33 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive; package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+needs-refinement: Distribution channel, signing identity and release credentials require explicit configuration.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-33 | planning ID B22
+Requirements SHA-256: a65d5c2c5d1a69a525b10e6abd017d73273e5590528589a0a3ed0674cd979f64
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b22,needs-refinement
+RDM-34,Provide built-in connection diagnostics and a redacted support report,"Diagnostics currently require backend CLI status, journalctl and a generic popup connection test; errors are mainly unstructured strings.
+
+Outcome
+Add structured error codes, retry/recovery explanations, browser/native/provider health tests and an explicit export action for redacted diagnostics.
+
+Boundaries
+No complete URLs/query secrets, cookies or unnecessary browsing history in exported diagnostics.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/backend/src/main.rs
+media/worker.py
+src/App.tsx
+extensions/src/popup.ts
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Preserve structured causes locally while exporting a deliberately redacted report with actionable recovery.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-18
+
+Acceptance criteria
+AC-1: A user can identify missing hosts, stale versions, denied portal access, invalid proxies and provider failures from the app.
+AC-2: Each tested error points to a relevant recovery action and preserves its underlying cause for local troubleshooting.
+AC-3: A redaction fixture proves exported reports contain no cookies, credentials, query tokens or unnecessary browsing history.
+
+Verification
+npm run agent:ticket -- RDM-34
+npm run agent:validate
+npm run agent:check -- --ticket RDM-34 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-34 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-18
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-34 | planning ID B23
+Requirements SHA-256: 87aaf43e179da1d1b75a06fd72640dc16efc36c3174aa93056295583084c8048
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b23,agent-blocked
+RDM-35,Schedule one-time and weekday queue windows with completion actions,"Schedules currently repeat daily and require both start and stop times.
+
+Outcome
+Add one-time/weekday schedules, independent start/stop settings, explicit time-zone semantics and opt-in completion actions.
+
+Boundaries
+Power/completion actions remain opt-in and manual stopping is not queue completion.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+crates/core/src/engine.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Model time-zone/window semantics explicitly and test missed windows, weekdays and daylight-saving changes.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-21
+
+Acceptance criteria
+AC-1: One-time, weekday, overnight and daylight-saving fixtures run only in their intended windows.
+AC-2: Manual stopping does not trigger completion actions and no power action is enabled by default.
+AC-3: Schedules survive restart and the UI shows the next eligible run and missed-window policy.
+
+Verification
+npm run agent:ticket -- RDM-35
+npm run agent:validate
+npm run agent:check -- --ticket RDM-35 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-35 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Confirm time-zone, missed-window and completion-action semantics.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-35 | planning ID B24
+Requirements SHA-256: 8dcd59e43426a4d1bc8bb2eb77b3a876129d85a091231409e2bb2109e1548298
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b24,needs-refinement
+RDM-36,"Apply data quotas, metered-network rules and battery-aware download policies","Speed limits exist, but there are no usage quotas or network/power policy controls.
+
+Outcome
+Track quota windows and configure metered/battery rules with explicit overrides and scheduled speed profiles.
+
+Boundaries
+Do not invent quota limits, battery thresholds or metered-network defaults.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/engine.rs
+crates/core/src/store.rs
+crates/core/src/transfer.rs
+crates/core/src/media.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Define persistent accounting windows, policy precedence and user overrides before implementation.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-29, RDM-35
+
+Acceptance criteria
+AC-1: A controlled quota pauses transfers at the configured budget and resumes at the next window without resetting downloaded data.
+AC-2: Simulated metered and battery transitions apply the selected policy and expose the reason in the UI.
+AC-3: Accounting and overrides survive restart and apply consistently to HTTP and media transfers.
+
+Verification
+npm run agent:ticket -- RDM-36
+npm run agent:validate
+npm run agent:check -- --ticket RDM-36 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-36 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Quota window, metered/battery policy precedence and defaults require refinement.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-36 | planning ID B25
+Requirements SHA-256: e315b0614d3ecebc065aed7d4dbb1cbd139022207f0ade453a9028f1426aa321
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b25,needs-refinement
+RDM-37,"Add audio-only, subtitles, chapters and previewed playlist selection","The media worker intentionally downloads a single video and has no audio-only, subtitle, chapter or playlist-selection interface.
+
+Outcome
+Extend media options and metadata with previewed playlist item selection, audio/subtitle choices and output naming templates.
+
+Boundaries
+No automatic whole-playlist download or implicit lossy conversion.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/protocol/src/lib.rs
+media/worker.py
+crates/core/src/media.rs
+src/App.tsx
+extensions/src/popup.ts
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Separate media options/metadata, selected playlist jobs and output processing into reviewable changes.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-25, RDM-26, RDM-21
+
+Acceptance criteria
+AC-1: A playlist preview creates only explicitly selected items with stable ordering and deduplication.
+AC-2: Audio-only and subtitle fixtures produce the selected outputs with clear container/conversion choices.
+AC-3: Items retain independent queue, retry and recovery state and unavailable items do not discard successful siblings.
+
+Verification
+npm run agent:ticket -- RDM-37
+npm run agent:validate
+npm run agent:check -- --ticket RDM-37 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-37 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Split metadata/options, playlist job lifecycle and optional output processing into independent subtasks.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-37 | planning ID B26
+Requirements SHA-256: e74eb204a78a4e6cbd531e00fdc3a9ba35120877f6c0fadd6f0aec1a8104934b
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b26,needs-refinement
+RDM-38,Benchmark adaptive chunk sizing and connection tuning,"The HTTP engine schedules a fixed 4 MiB chunk pool with configured worker counts; there is no measured adaptive tuning.
+
+Outcome
+Build reproducible latency/throughput fixtures and implement bounded adaptation only where it improves measured performance.
+
+Boundaries
+Never trade range/durability/integrity guarantees for a faster benchmark.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+tests/acceptance.py
+VERIFICATION.md
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+
+Contracts
+Retain baseline measurements, controlled latency/rate-limit fixtures and negative speedup results.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-29, RDM-49
+
+Acceptance criteria
+AC-1: Benchmarks compare baseline and candidate behaviour under high latency, slow origins and rate limiting.
+AC-2: Every candidate preserves exact hashes, range validation, durable recovery and origin ceilings.
+AC-3: Published results include cases with no speedup and prevent unsupported universal acceleration claims.
+
+Verification
+npm run agent:ticket -- RDM-38
+npm run agent:validate
+npm run agent:check -- --ticket RDM-38 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-38 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-29, RDM-49
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-38 | planning ID B27
+Requirements SHA-256: 2230b6ede8b152fea914664d257439f23b6815ede119285b9ffc1d5ad255775c
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b27,agent-blocked
+RDM-39,Add opt-in clipboard monitoring and desktop link drag-and-drop,"Users can paste links manually, but there is no clipboard discovery, link drop target or dragging completed files out of the app.
+
+Outcome
+Add user-enabled URL clipboard prompts, validated link drops and completed-file drag actions using supported Ubuntu/Tauri APIs.
+
+Boundaries
+Do not retain unrelated clipboard data or enable clipboard monitoring by default.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+src-tauri/src/main.rs
+src/App.tsx
+README.md
+tests/agent-workflow.test.mjs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Use supported desktop clipboard/drop APIs and preview links with the existing Add flow.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-20, RDM-30
+
+Acceptance criteria
+AC-1: Clipboard monitoring is disabled by default and can be disabled without retaining unrelated clipboard content.
+AC-2: Dropping eligible links opens a download preview and dropping unsupported data causes no transfer.
+AC-3: Dragging a completed file provides its real path and works in supported Ubuntu file managers.
+
+Verification
+npm run agent:ticket -- RDM-39
+npm run agent:validate
+npm run agent:check -- --ticket RDM-39 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-39 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-20, RDM-30
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-39 | planning ID B28
+Requirements SHA-256: 81bb7ec927df85d84954ccd0e30a238b4f460d7168f9a53c057f739c04304bed
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b28,agent-blocked
+RDM-40,Add FTP and FTPS transfers through the common download lifecycle,"Ordinary transfers currently support HTTP/HTTPS GET only; FTP was explicitly deferred.
+
+Outcome
+Implement FTP/FTPS as separate transport adapters sharing queues, destination safeguards, progress and recoverable state; evaluate SFTP in a separate follow-up.
+
+Boundaries
+SFTP is a separate follow-up; no certificate bypass or silently changed transport.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/lib.rs
+crates/core/src/engine.rs
+crates/protocol/src/lib.rs
+README.md
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Add transport adapters under the same job lifecycle and scoped credential model.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-27, RDM-28, RDM-49
+
+Acceptance criteria
+AC-1: Controlled FTP and certificate-validated FTPS fixtures transfer exact bytes and recover supported interrupted transfers.
+AC-2: Authentication uses scoped credential handling and rejects unsupported insecure configuration rather than silently changing protocols.
+AC-3: Existing HTTP and media acceptance tests remain unchanged and pass.
+
+Verification
+npm run agent:ticket -- RDM-40
+npm run agent:validate
+npm run agent:check -- --ticket RDM-40 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-40 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Finalize supported FTP/FTPS security/resume contract and fixture server setup.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-40 | planning ID B29
+Requirements SHA-256: 143222455c6d4e6cc8ce49418f344bce47d83268904064e89766e7d0ce7e27c6
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b29,needs-refinement
+RDM-41,Build a bounded website grabber with filtered offline downloads,"Page-link collection and recursive website capture are outside the current release.
+
+Outcome
+Create previewable crawl projects with scope/depth/file filters, link rewriting and optional conditional synchronization.
+
+Boundaries
+No unlimited crawl or automatic replacement of existing offline content.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/engine.rs
+crates/core/src/transfer.rs
+crates/protocol/src/lib.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Separate crawl planning/bounds, retrieval/state, offline rewriting and the user selection interface.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-24, RDM-35, RDM-31
+
+Acceptance criteria
+AC-1: A controlled multi-page site produces the selected offline subset with working rewritten local links.
+AC-2: Crawl limits, cancellation, duplicate detection and origin rules bound the requested work.
+AC-3: Synchronization uses representation validators and preserves existing files unless the user has explicitly selected replacement behaviour.
+
+Verification
+npm run agent:ticket -- RDM-41
+npm run agent:validate
+npm run agent:check -- --ticket RDM-41 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-41 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Split bounded crawl engine, offline rewriting and selection UI; confirm crawl limits and synchronization policy.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-41 | planning ID B30
+Requirements SHA-256: 537d0253b0b7eb4b2fb5d2896490014f7b6cce7aa8c0df362db6d3b32ffc8abb
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b30,needs-refinement
+RDM-42,Preview supported ZIP archive contents before full download,"RDM has no archive directory preview.
+
+Outcome
+Read bounded ZIP directory metadata through validated ranges, display entries and handle unsupported/encrypted layouts explicitly.
+
+Boundaries
+Preview must not extract, execute entries or fetch an unbounded central directory.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/core/src/transfer.rs
+crates/protocol/src/lib.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Parse bounded ZIP metadata from validated ranges, with explicit unsupported/encrypted outcomes.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-20, RDM-32
+
+Acceptance criteria
+AC-1: A supported ZIP fixture lists filenames and sizes without transferring the complete archive.
+AC-2: Invalid ranges, oversized metadata and malformed archives produce bounded failures.
+AC-3: Preview never extracts or executes archive entries and the eventual whole-file download still passes checksum verification.
+
+Verification
+npm run agent:ticket -- RDM-42
+npm run agent:validate
+npm run agent:check -- --ticket RDM-42 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-42 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-20, RDM-32
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-42 | planning ID B31
+Requirements SHA-256: 80f7f9cc85f86e459548b0500d3431b02bb9f52fec673b36f16a40fe2279adf1
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b31,agent-blocked
+RDM-43,Run explicitly configured completion scans and post-download actions,"There is no optional antivirus scan or configured completion-action integration.
+
+Outcome
+Add opt-in scanner integration and explicit action profiles with visible results; keep downloaded files from being automatically executed by default.
+
+Boundaries
+No shell interpolation, automatic execution of downloads or deletion inferred from a scanner exit code.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+src-tauri/src/main.rs
+crates/core/src/engine.rs
+crates/protocol/src/lib.rs
+src/App.tsx
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Use opt-in executable/action profiles with argument arrays and distinct scan versus transfer outcomes.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-15, RDM-30, RDM-32
+
+Acceptance criteria
+AC-1: Controlled success, detection and scanner-unavailable fixtures show distinct scan outcomes.
+AC-2: A failed scan or action does not misreport transfer integrity or remove the file without a selected policy.
+AC-3: Paths are passed as arguments without shell interpolation and no completion action runs unless configured by the user.
+
+Verification
+npm run agent:ticket -- RDM-43
+npm run agent:validate
+npm run agent:check -- --ticket RDM-43 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-43 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+needs-refinement: Confirm scanner/action policy and user-selected failure handling.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-43 | planning ID B32
+Requirements SHA-256: e099e29fe73a8d15d4151bdadf62b3cb300733a898957f8da46f1ccfe2bd919a
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b32,needs-refinement
+RDM-44,Customize table layouts and keyboard shortcuts with localization support,"Themes and basic keyboard navigation exist, but columns/layouts are fixed and the interface is English-only.
+
+Outcome
+Add saved column layouts, documented shortcuts, translatable strings and accessibility checks across core workflows.
+
+Boundaries
+Do not let localization/layout changes hide service or recovery actions.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+src/App.tsx
+src/style.css
+extensions/src/popup.html
+extensions/src/content.ts
+tests/App.test.tsx
+tests/agent-workflow.test.mjs
+tests/App.test.tsx
+tests/desktop_webdriver.py
+
+Contracts
+Keep persisted layout preferences distinct from data sorting; test keyboard workflows and expanded translations.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-19, RDM-21, RDM-30
+
+Acceptance criteria
+AC-1: Column visibility/order and supported layout choices persist across app restarts.
+AC-2: Add, search, select, pause and recovery workflows are keyboard-operable with visible focus and labelled controls.
+AC-3: A second locale and expanded-text fixture render correctly in light/dark modes without hiding important actions.
+
+Verification
+npm run agent:ticket -- RDM-44
+npm run agent:validate
+npm run agent:check -- --ticket RDM-44 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-44 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-19, RDM-21, RDM-30
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-44 | planning ID B33
+Requirements SHA-256: 65c6439124ff1b47563a8086eea5b5d15c88716dc7e403736e065fccf5544a0b
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b33,agent-blocked
+RDM-45,Expose a friendly rdm command-line interface for desktop automation,"The backend accepts diagnostic commands and raw JSON, but there is no ergonomic public CLI.
+
+Outcome
+Provide add/list/pause/resume/queue commands with machine-readable output, documented exit codes and the existing private service protocol.
+
+Boundaries
+Do not widen browser native-host administrative permissions to match the local CLI.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/backend/src/main.rs
+crates/core/src/client.rs
+crates/protocol/src/lib.rs
+README.md
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+
+Contracts
+Implement human and machine CLI adapters over the existing private service protocol.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-21, RDM-34
+
+Acceptance criteria
+AC-1: A shell can enqueue and control downloads without constructing protocol JSON manually.
+AC-2: Human and JSON output handle errors predictably and avoid exposing credentials by default.
+AC-3: CLI changes affect the same jobs seen in the desktop and preserve native-host restrictions on administrative browser commands.
+
+Verification
+npm run agent:ticket -- RDM-45
+npm run agent:validate
+npm run agent:check -- --ticket RDM-45 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-45 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-21, RDM-34
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-45 | planning ID B34
+Requirements SHA-256: 6cc0d57acc687dd7e70400ba52e6caf2ae694c68587915b2460311eb30a58bc4
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b34,agent-blocked
+RDM-46,Test and document additional Chromium browsers and browser profiles,"Brave and Firefox Snap are the selected supported browsers. Some host registration paths exist for Chrome/Chromium but their complete workflows are not established.
+
+Outcome
+Add supported installation/registration discovery and an explicit compatibility matrix for Chrome, Chromium, Edge and multiple profiles where available.
+
+Boundaries
+Do not edit protected browser preferences or call an untested sandbox/portal Supported.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+crates/backend/src/main.rs
+scripts/build-extensions.mjs
+tests/browser_chromium.mjs
+README.md
+tests/agent-workflow.test.mjs
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Build a tested browser/profile matrix using supported registration and disposable profiles.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-18, RDM-23, RDM-50
+
+Acceptance criteria
+AC-1: Every browser marked Supported passes native connection, public handoff, approved authentication and failed-handoff retention tests.
+AC-2: Per-profile setup and extension identities remain consistent without editing protected browser preferences.
+AC-3: Unsupported sandbox/portal cases are labelled with tested limitations rather than assumed compatible.
+
+Verification
+npm run agent:ticket -- RDM-46
+npm run agent:validate
+npm run agent:check -- --ticket RDM-46 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-46 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive; package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+needs-refinement: Confirm which additional browsers/profiles are available for real verification.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-46 | planning ID B35
+Requirements SHA-256: a8d9171d3fe56cf950c9c47cd84c33200d3f7114581f537722813a2ea10bdeca
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p2,rdm-b35,needs-refinement
+RDM-47,Initialize and publish the GPL-3.0-only source repository with contribution guidance,"The workspace includes source archives and license notices but is not currently an initialized Git repository.
+
+Outcome
+Establish version control, release tags, contribution/build guidance, issue templates and repository publication under the user's chosen hosting account.
+
+Boundaries
+Exclude the proprietary installer, local capture artifacts, caches, credentials and generated binaries.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+.gitignore
+LICENSE
+README.md
+THIRD_PARTY_NOTICES.md
+scripts/release.sh
+tests/agent-workflow.test.mjs
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Publish original source with pinned toolchains/lockfiles and reproducible notices/provenance.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: The published source builds the documented Ubuntu package from pinned toolchains and committed lockfiles.
+AC-2: The proprietary Windows installer, caches, generated outputs and credentials are excluded from repository history.
+AC-3: GPL license text, dependency notices, contribution instructions and release provenance are present; any required hosting authorization is resolved before publication.
+
+Verification
+npm run agent:ticket -- RDM-47
+npm run agent:validate
+npm run agent:check -- --ticket RDM-47 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-47 --environment cloud --base origin/main
+
+Required local evidence
+package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-47 | planning ID B36
+Requirements SHA-256: 36f732b29aa58a85b67090a176a02503fc251b1f0daebcafcb7741fe516e67bf
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b36,agent-ready
+RDM-48,Extend CI to Ubuntu 24.04 and 26.04 packages and browser regressions,"An Ubuntu 24.04 GitHub Actions workflow exists; both runtime releases have been checked locally but are not represented as complete automated release gates.
+
+Outcome
+Add runtime matrices, controlled Brave/Firefox content/handoff checks, media fixtures, packaging upgrades and retained test evidence.
+
+Boundaries
+A headless browser fixture is not a real Firefox Snap portal permission grant.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+.github/workflows/check.yml
+packaging/Dockerfile.runtime
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+scripts/release.sh
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Use shared check definitions for CI and retain exact-commit artifacts on both Ubuntu runtime baselines.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-47
+
+Acceptance criteria
+AC-1: CI builds on the Ubuntu 24.04 baseline and tests installed packages on 24.04 and 26.04.
+AC-2: HTTP integrity/recovery, disguised HLS, Origin context and browser handoff regressions gate releases.
+AC-3: Browser permission prompts are tested through their supported paths without fake grants; logs, hashes and failure artifacts are retained.
+
+Verification
+npm run agent:ticket -- RDM-48
+npm run agent:validate
+npm run agent:check -- --ticket RDM-48 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-48 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive; package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-47
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-48 | planning ID B37
+Requirements SHA-256: a6cfb4e77184e97366420803090988ac4e71993afb81539a566e4435bb601830
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b37,agent-blocked
+RDM-49,"Gate 1.0 with extended recovery, large-library and installed-package acceptance tests","Existing controlled integrity, recovery, browser and desktop checks provide a baseline, but the newly prioritized workflows need explicit release evidence.
+
+Outcome
+Add acceptance coverage for refreshed addresses, browser-context loss, sleep/wake, ambiguous players, large histories and clean installation/upgrade/uninstallation.
+
+Boundaries
+Do not close this gate while prerequisite features or required environment checks remain incomplete.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+tests/acceptance.py
+tests/media_acceptance.py
+tests/desktop_webdriver.py
+tests/io_failures.py
+VERIFICATION.md
+tests/agent-workflow.test.mjs
+tests/acceptance.py
+crates/core/tests/state.rs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+tests/App.test.tsx
+tests/desktop_webdriver.py
+tests/io_failures.py
+packaging/Dockerfile.runtime
+
+Contracts
+Tie each release acceptance scenario to controlled fixtures and installed-package evidence at the release revision.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-12, RDM-13, RDM-14, RDM-15, RDM-16, RDM-17, RDM-18, RDM-31, RDM-48
+
+Acceptance criteria
+AC-1: A large fixture pauses, survives forced service termination, refreshes an expired address and completes with the original SHA-256.
+AC-2: Installed-app tests on clean Ubuntu 24.04/26.04 environments establish window-close background operation and Brave/Firefox handoff.
+AC-3: Failures retain evidence and block the release; live-site smoke tests are distinguished from deterministic fixtures and no unrun check is marked Passed.
+
+Verification
+npm run agent:ticket -- RDM-49
+npm run agent:validate
+npm run agent:check -- --ticket RDM-49 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-49 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive; package-matrix: installed Ubuntu 24.04/26.04 results at the final head SHA, produced locally or by CI
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-12, RDM-13, RDM-14, RDM-15, RDM-16, RDM-17, RDM-18, RDM-31, RDM-48
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-49 | planning ID B38
+Requirements SHA-256: 1dcfeb560d2f6ba287c981da7d4f34a7141786e5758afa7042c560a49fc594f5
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b38,agent-blocked
+RDM-50,Publish the supported-site matrix and repeatable provider compatibility checks,"The provider supports selected workflows and current upstream extractors; a visible video button is not evidence of universal site support.
+
+Outcome
+Document supported, experimental and unsupported workflows; record browser/provider versions and reproducible compatibility checks without retaining user browsing data.
+
+Boundaries
+A visible overlay or successful extraction probe alone is not a full-download compatibility claim.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+README.md
+VERIFICATION.md
+packaging/media-tools.json
+tests/youtube_live.py
+tests/media_acceptance.py
+tests/agent-workflow.test.mjs
+tests/media_acceptance.py
+tests/media.test.ts
+tests/browser_chromium.mjs
+tests/browser_firefox_snap.py
+tests/extension.test.ts
+
+Contracts
+Publish dated method/version evidence per workflow and distinguish deterministic fixtures from live sites.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+RDM-14, RDM-18, RDM-34
+
+Acceptance criteria
+AC-1: The matrix separates direct HTTP, HLS/DASH, YouTube, authenticated GET and browser-bound/DRM limitations.
+AC-2: Each Supported claim has a dated test method and tested component versions.
+AC-3: Provider updates run a bounded approved smoke set plus local regressions and publish known failures honestly.
+
+Verification
+npm run agent:ticket -- RDM-50
+npm run agent:validate
+npm run agent:check -- --ticket RDM-50 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-50 --environment cloud --base origin/main
+
+Required local evidence
+brave-handoff: actual local Brave extension/native-host tests at the final head SHA; firefox-snap-handoff: actual local Firefox Snap portal test at the final head SHA; permission grant is interactive
+
+Agent readiness
+agent-blocked: Prerequisites must be delivered: RDM-14, RDM-18, RDM-34
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-50 | planning ID B39
+Requirements SHA-256: cbcf037f2db075981d5d607996c0b3fb689588e334f3d53838eaf3be52d0934a
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p1,rdm-b39,agent-blocked
+RDM-51,"Define RDM 1.0 scope, board workflow and evidence-based Definition of Done","The roadmap is approved for backlog creation. Priorities must remain distinct from implementation status and existing 0.2.2 capabilities must not be recreated as missing features.
+
+Outcome
+Use P0 for reliability blockers, P1 for essential completion and P2 for later expansion. Track To Do, In Progress, In Review and Done; record blockers and keep work unassigned until an owner accepts it.
+
+Boundaries
+Do not mark existing 0.2.2 behavior as newly implemented or make P2 expansion a 1.0 release blocker.
+Unrelated roadmap features and release publication/host installation unless explicitly assigned.
+
+Starting points
+README.md
+VERIFICATION.md
+planning/jira-backlog.json
+tests/agent-workflow.test.mjs
+
+Contracts
+Maintain priority versus readiness versus status distinctions and explicit evidence-based completion.
+Keep shared Rust/TypeScript interfaces and existing SQLite histories compatible; use versioned/defaulted fields as applicable.
+
+Dependencies
+None; confirm live Jira before starting.
+
+Acceptance criteria
+AC-1: Every approved roadmap item has an epic, a priority label, implementation context and testable acceptance criteria.
+AC-2: Done requires implemented Rust/frontend integration as applicable, relevant passing tests, installed Ubuntu validation for affected workflows, user documentation and linked evidence.
+AC-3: The 1.0 scope remains Ubuntu 24.04/26.04 x86-64, GPL-3.0-only and HTTP/HTTPS plus supported non-DRM media; optional FTP/site-grabber expansions do not block the essential release.
+
+Verification
+npm run agent:ticket -- RDM-51
+npm run agent:validate
+npm run agent:check -- --ticket RDM-51 --environment local --base origin/main
+npm run agent:check -- --ticket RDM-51 --environment cloud --base origin/main
+
+Required local evidence
+No additional interactive local check declared; diff impact may add checks.
+
+Agent readiness
+agent-ready: No implementation dependencies; confirm live issue and environment at assignment.
+
+Delivery
+One linked PR; exact base/head SHAs; live requirements comparison; AC-by-AC evidence; actual check logs, environment versions, limitations and migration notes. Use the committed rdm-implement-ticket and rdm-review-ticket skills. In Review only after the handoff gate passes; Done only after merge and passing post-merge checks.
+
+Execution contract v1 | RDM-51 | planning ID B40
+Requirements SHA-256: 6405adc35dddd1fb2aa276cfed281a3129b7737a5c500ca3fa12811f7affd5ba
+Source: https://github.com/MudabbirulSaad/rust-download-manager
+Jira owns live requirements and status. Historical evidence is not a new revision's test result.",p0,rdm-b40,agent-ready

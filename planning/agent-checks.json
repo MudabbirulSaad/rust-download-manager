@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "common": ["workflow-tests", "contracts", "types", "rust-tests", "clippy", "frontend-tests", "frontend-build", "extensions"],
+    "http": ["backend-build", "backend-acceptance"],
+    "media": ["backend-build", "media-acceptance"],
+    "desktop": ["desktop-build", "desktop-webdriver"],
+    "browser": ["backend-build", "brave-handoff", "firefox-snap-handoff"],
+    "package": ["package-build", "package-matrix"]
+  },
+  "impact_rules": [
+    {"prefixes": ["crates/core/", "crates/backend/", "crates/protocol/"], "profiles": ["http"]},
+    {"prefixes": ["crates/core/src/media.rs", "media/", "packaging/media-tools.json"], "profiles": ["media"]},
+    {"prefixes": ["src/", "src-tauri/"], "profiles": ["desktop"]},
+    {"prefixes": ["extensions/"], "profiles": ["browser"]},
+    {"prefixes": ["packaging/", "scripts/package.sh", "scripts/release.sh"], "profiles": ["package"]}
+  ],
+  "checks": {
+    "workflow-tests": {"command": ["node", "--test", "tests/agent-workflow.test.mjs"]},
+    "contracts": {"command": ["node", "scripts/agent-workflow.mjs", "validate"]},
+    "types": {"command": ["node", "scripts/export-types.mjs", "--check"]},
+    "rust-tests": {"command": ["cargo", "test", "--locked", "-p", "rdm-core", "-p", "rdm-protocol"]},
+    "clippy": {"command": ["cargo", "clippy", "--locked", "-p", "rdm-core", "-p", "rdm-backend", "-p", "rdm-protocol", "--all-targets", "--", "-D", "warnings"]},
+    "frontend-tests": {"command": ["npm", "test"]},
+    "frontend-build": {"command": ["npm", "run", "build"]},
+    "extensions": {"command": ["npm", "run", "extensions"]},
+    "backend-build": {"command": ["cargo", "build", "--locked", "-p", "rdm-backend"]},
+    "backend-acceptance": {"command": ["python3", "tests/acceptance.py"]},
+    "media-acceptance": {"command": ["python3", "tests/media_acceptance.py"]},
+    "desktop-build": {"command": ["cargo", "build", "--locked", "--release", "-p", "rdm-backend", "-p", "rdm-desktop", "--features", "rdm-desktop/custom-protocol"]},
+    "desktop-webdriver": {"command": ["dbus-run-session", "--", "xvfb-run", "-a", "python3", "tests/desktop_webdriver.py"], "env": {"RDM_DESKTOP": "{target}/release/rdm", "RDM_TEST_BACKEND": "{target}/release/rdm-backend"}},
+    "brave-handoff": {"command": ["node", "tests/browser_chromium.mjs"], "environments": ["local"], "reason": "Real Brave extension/native-host integration is verified on the local Ubuntu workstation."},
+    "firefox-snap-handoff": {"command": ["python3", "tests/browser_firefox_snap.py"], "environments": ["local"], "interactive": true, "env": {"RDM_FIREFOX_INTERACTIVE": "1"}, "reason": "Requires local Firefox Snap, a focused disposable browser, and an actual native-host portal grant."},
+    "package-build": {"command": ["bash", "scripts/agent-package.sh"]},
+    "package-matrix": {"command": ["bash", "scripts/agent-package-matrix.sh"], "environments": ["local", "ci"], "reason": "Requires Docker to exercise installed packages on Ubuntu 24.04 and 26.04."}
+  }
+}
